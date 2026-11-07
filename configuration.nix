@@ -126,6 +126,36 @@
     settings.PermitRootLogin = "no";
   };
 
+  networking.firewall.enable = false;
+  networking.nftables = {
+    enable = true;
+    tables.firewall = {
+      family = "inet";
+      content = ''
+        chain input {
+          type filter hook input priority 0; policy drop;
+
+          iif lo accept
+
+          ct state invalid counter drop
+          ct state { established, related } accept
+
+          meta l4proto { icmp, ipv6-icmp } accept
+          tcp dport 22 accept
+
+          counter
+        }
+
+        chain forward {
+          type filter hook forward priority 0; policy drop;
+        }
+
+        chain output {
+          type filter hook output priority 0; policy accept;
+        }
+      '';
+    };
+  };
 
   # Copy the NixOS configuration file and link it from the resulting system
   # (/run/current-system/configuration.nix). This is useful in case you
