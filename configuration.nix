@@ -53,8 +53,11 @@
   boot.kernel.sysctl = {
     "net.ipv4.conf.all.forwarding" = true;
     "net.ipv6.conf.all.forwarding" = true;
+
+    "net.ipv4.conf.all.arp_filter" = 1;
+    "net.ipv4.conf.default.arp_filter" = 1;
+
     # TODO: reverse path filtering
-    # TODO: arp filter?
   };
 
   networking = {
@@ -70,22 +73,16 @@
     networks."10-backup" = {
       matchConfig.Name = "enp8s0"; # 2.5GbE port 5
       networkConfig = {
-        IPv6AcceptRA = "yes";
-        IPv6SendRA = "yes";
-        MulticastDNS = "yes";
+        DHCPServer = true;
       };
-      ipv6SendRAConfig = {
-        Managed = "no";
-        OtherInformation = "no";
-        RouterLifetimeSec = 0; # not router
+      dhcpServerConfig = {
+        EmitRouter = false; # not router
+        EmitDNS = false;
+        PoolOffset = 100;
+        PoolSize = 100;
       };
       address = [
-        "fd71:c146:ab31:ffff::1/64"
-      ];
-      ipv6Prefixes = [
-        {
-          Prefix = "fd71:c146:ab31:ffff::/64";
-        }
+        "192.168.1.1/24"
       ];
     };
 
