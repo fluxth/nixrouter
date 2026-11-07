@@ -50,10 +50,53 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  networking.hostName = "nixrouter"; # Define your hostname.
+  boot.kernel.sysctl = {
+    "net.ipv4.conf.all.forwarding" = true;
+    "net.ipv6.conf.all.forwarding" = true;
+    # TODO: reverse path filtering
+    # TODO: arp filter?
+  };
 
-  # Configure network connections interactively with nmcli or nmtui.
-  networking.networkmanager.enable = true;
+  networking = {
+    hostName = "nixrouter";
+
+    useDHCP = false;
+    useNetworkd = true;
+  };
+
+  systemd.network = {
+    enable = true;
+
+    networks."10-backup" = {
+      matchConfig.Name = "enp8s0"; # 2.5GbE port 5
+      networkConfig = {
+        IPv6AcceptRA = "yes";
+        IPv6SendRA = "yes";
+        MulticastDNS = "yes";
+      };
+      ipv6SendRAConfig = {
+        Managed = "no";
+        OtherInformation = "no";
+        RouterLifetimeSec = 0; # not router
+      };
+      address = [
+        "fd71:c146:ab31:ffff::1/64"
+      ];
+      ipv6Prefixes = [
+        {
+          Prefix = "fd71:c146:ab31:ffff::/64";
+        }
+      ];
+    };
+
+    networks."20-wan" = {
+      matchConfig.Name = "enp4s0"; # 2.5GbE port 1
+      networkConfig = {
+        IPv6AcceptRA = "yes";
+        DHCP = "yes";
+      };
+    };
+  };
 
   time.timeZone = "Asia/Tokyo";
   i18n.defaultLocale = "en_US.UTF-8";
