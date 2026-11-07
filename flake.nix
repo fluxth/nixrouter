@@ -1,15 +1,17 @@
 {
-  description = "A very basic flake";
+  description = "NixOS Router";
 
   inputs = {
-    nixpkgs.url = "https://channels.nixos.org/nixpkgs-unstable/nixexprs.tar.zst";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
   };
 
-  outputs = inputs: {
-    packages = builtins.mapAttrs (system: pkgs: {
-      hello = pkgs.hello;
-
-      default = inputs.self.packages.${system}.hello;
-    }) inputs.nixpkgs.legacyPackages;
+  outputs = { self, nixpkgs, ... }@inputs: {
+    nixosConfigurations.nixrouter = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        ./hardware-configuration.nix
+        ./configuration.nix
+      ];
+    };
   };
 }
