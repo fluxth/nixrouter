@@ -201,7 +201,7 @@
         chain input {
           type filter hook input priority 0; policy drop;
 
-          iif lo accept
+          iifname "lo" accept
 
           ct state { established, related } accept
           ct state invalid counter drop
@@ -225,6 +225,21 @@
 
         chain output {
           type filter hook output priority 0; policy accept;
+        }
+      '';
+    };
+
+    tables.raw = {
+      family = "inet";
+      content = ''
+        chain prerouting {
+          type filter hook prerouting priority raw; policy accept;
+          iifname "lo" notrack
+        }
+
+        chain output {
+          type filter hook output priority raw; policy accept;
+          oifname "lo" notrack
         }
       '';
     };
