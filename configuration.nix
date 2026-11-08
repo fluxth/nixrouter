@@ -69,13 +69,24 @@
     useDHCP = false;
     useNetworkd = true;
 
-    nameservers = [
-      "2620:fe::fe"
-      "2620:fe::9"
-    ];
+    nameservers = [ "::1" ];
   };
 
-  services.resolved.enable = true;
+  # use dnsproxy instead
+  services.resolved.enable = false;
+
+  services.dnsproxy = {
+    enable = true;
+
+    settings = {
+      upstream = [
+        "quic://[2620:fe::fe]/dns-query"
+        "quic://[2620:fe::9]/dns-query"
+      ];
+
+      dnssec = true;
+    };
+  };
 
   systemd.network = {
     enable = true;
@@ -157,6 +168,7 @@
     extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
     packages = with pkgs; [
       git
+      dig
     ];
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILzo/1Jt86KbVV2gVFG27JqyxglPejOZrN/B6Eo/YDi5" # content of authorized_keys file
