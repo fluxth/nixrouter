@@ -57,6 +57,9 @@
     "net.ipv4.conf.all.arp_filter" = 1;
     "net.ipv4.conf.default.arp_filter" = 1;
 
+    "net.ipv6.conf.enp4s0.proxy_ndp" = 1;
+    "net.ipv6.conf.enp5s0.proxy_ndp" = 1;
+
     # TODO: reverse path filtering
   };
 
@@ -65,7 +68,14 @@
 
     useDHCP = false;
     useNetworkd = true;
+
+    nameservers = [
+      "2620:fe::fe"
+      "2620:fe::9"
+    ];
   };
+
+  services.resolved.enable = true;
 
   systemd.network = {
     enable = true;
@@ -90,7 +100,50 @@
       matchConfig.Name = "enp4s0"; # 2.5GbE port 1
       networkConfig = {
         IPv6AcceptRA = "yes";
+        IPv6Forwarding = true;
+      };
+      ipv6AcceptRAConfig = {
+        UseOnLinkPrefix = false;
+      };
+    };
+
+    networks."30-lan" = {
+      matchConfig.Name = "enp5s0"; # 2.5GbE port 2
+      networkConfig = {
+        IPv6SendRA = true;
+        IPv6AcceptRA = false;
+        IPv6Forwarding = true;
+      };
+      address = [
+        "2409:10:720:c200::1/64"
+      ];
+      ipv6Prefixes = [
+        {
+          Prefix = "2409:10:720:c200::/64";
+          OnLink = true;
+          AddressAutoconfiguration = true;
+        }
+      ];
+    };
+
+    networks."90-labwan" = {
+      matchConfig.Name = "enp7s0"; # 2.5GbE port 4
+      networkConfig = {
+        IPv6AcceptRA = "yes";
         DHCP = "yes";
+      };
+    };
+  };
+
+  services.ndppd = {
+    enable = true;
+
+    proxies."enp4s0" = {
+      router = false;
+
+      rules."2409:10:720:c200::/64" = {
+        method = "iface";
+        interface = "enp5s0";
       };
     };
   };
@@ -114,6 +167,7 @@
     variables.EDITOR = "vim";
     systemPackages = with pkgs; [
       vim
+      tcpdump
     ];
   };
 
@@ -137,10 +191,10 @@
 
           iif lo accept
 
-          ct state invalid counter drop
           ct state { established, related } accept
+          ct state invalid counter drop
 
-          meta l4proto { icmp, ipv6-icmp } accept
+          meta l4proto { icmp, ipv6-icmp } counter accept
           tcp dport 22 accept
 
           counter
@@ -148,6 +202,13 @@
 
         chain forward {
           type filter hook forward priority 0; policy drop;
+
+          ct state { established, related } accept
+          ct state invalid counter drop
+
+          iifname "enp5s0" counter accept
+
+          counter
         }
 
         chain output {
