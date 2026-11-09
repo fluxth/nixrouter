@@ -228,6 +228,7 @@
     systemPackages = with pkgs; [
       vim
       tcpdump
+      conntrack-tools
     ];
   };
 
@@ -294,7 +295,8 @@
           # ds-lite MSS clamping
           oifname "wan4-dslite" meta nfproto ipv4 tcp flags syn tcp option maxseg size set rt mtu counter
 
-          iifname "enp5s0" counter accept
+          iifname "enp5s0" ip6 saddr { 2409:10:720:c200::/64 } counter accept
+          iifname "enp5s0" ip saddr { 10.0.0.0/24 } counter accept
 
           counter
         }
@@ -311,11 +313,13 @@
         chain prerouting {
           type filter hook prerouting priority raw; policy accept;
           iifname "lo" notrack
+          # TODO: untrack the dslite transix tunnel
         }
 
         chain output {
           type filter hook output priority raw; policy accept;
           oifname "lo" notrack
+          # TODO: untrack the dslite transix tunnel
         }
       '';
     };
