@@ -91,6 +91,20 @@
   systemd.network = {
     enable = true;
 
+    netdevs."15-dslite" = {
+      netdevConfig = {
+        Name = "wan4-dslite";
+        Kind = "ip6tnl";
+      };
+      tunnelConfig = {
+        Mode = "ipip6";
+        Local = "slaac";
+        Remote = "2404:8e00::feed:101";
+        EncapsulationLimit = "none"; # otherwise the MTU drops to 1452
+        DiscoverPathMTU = true;
+      };
+    };
+
     networks."10-backup" = {
       matchConfig.Name = "enp8s0"; # 2.5GbE port 5
       networkConfig = {
@@ -107,15 +121,33 @@
       ];
     };
 
-    networks."20-wan" = {
+    networks."20-wan6" = {
       matchConfig.Name = "enp4s0"; # 2.5GbE port 1
       networkConfig = {
         IPv6AcceptRA = "yes";
         IPv6Forwarding = true;
+        IPv6LinkLocalAddressGenerationMode = "stable-privacy";
+        IPv6PrivacyExtensions = true;
+        Tunnel = "wan4-dslite";
       };
       ipv6AcceptRAConfig = {
         UseOnLinkPrefix = false;
+        Token = "prefixstable";
       };
+    };
+
+    networks."25-wan4-dslite" = {
+      matchConfig.Name = "wan4-dslite";
+      linkConfig.MTUBytes = "1460";
+      networkConfig = {
+        IPv4Forwarding = true;
+      };
+      address = [ "192.0.0.2" ];
+      routes = [
+        {
+          Destination = "0.0.0.0/0";
+        }
+      ];
     };
 
     networks."30-lan" = {
@@ -123,11 +155,26 @@
       networkConfig = {
         IPv6SendRA = true;
         IPv6AcceptRA = false;
+        DHCPServer = true;
+        IPv4Forwarding = true;
         IPv6Forwarding = true;
       };
       address = [
         "2409:10:720:c200::1/64"
+        "10.0.0.1/24"
       ];
+      dhcpServerConfig = {
+        EmitRouter = true;
+        EmitDNS = true;
+        PoolOffset = 100;
+        PoolSize = 100;
+        DNS = [
+          "10.0.0.1"
+        ];
+      };
+      ipv6SendRAConfig = {
+        DNS = [ "2409:10:720:c200::1" ];
+      };
       ipv6Prefixes = [
         {
           Prefix = "2409:10:720:c200::/64";
@@ -209,6 +256,8 @@
 
           meta l4proto { icmp, ipv6-icmp } counter accept
           tcp dport 22 accept
+          iifname "enp5s0" udp dport 67 accept
+          iifname "enp5s0" udp dport 53 accept
 
           counter
         }
@@ -218,6 +267,9 @@
 
           ct state { established, related } accept
           ct state invalid counter drop
+
+          # ds-lite MSS clamping
+          oifname "wan4-dslite" meta nfproto ipv4 tcp flags syn tcp option maxseg size set rt mtu counter
 
           iifname "enp5s0" counter accept
 
