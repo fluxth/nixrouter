@@ -273,11 +273,15 @@
         chain input {
           type filter hook input priority 0; policy drop;
 
+          # stateless rules
           iifname "lo" accept
+          iifname "enp4s0" ip6 saddr { 2404:8e00::feed:100, 2404:8e00::feed:101, 2404:8e00::feed:102 } ip6 nexthdr ipv4 accept
 
+          # conntrack
           ct state { established, related } accept
           ct state invalid counter drop
 
+          # stateful rules
           meta l4proto { icmp, ipv6-icmp } counter accept
           tcp dport 22 accept
           iifname "enp5s0" udp dport 67 accept
@@ -289,12 +293,14 @@
         chain forward {
           type filter hook forward priority 0; policy drop;
 
+          # conntrack
           ct state { established, related } accept
           ct state invalid counter drop
 
           # ds-lite MSS clamping
           oifname "wan4-dslite" meta nfproto ipv4 tcp flags syn tcp option maxseg size set rt mtu counter
 
+          # stateful rules
           iifname "enp5s0" ip6 saddr { 2409:10:720:c200::/64 } counter accept
           iifname "enp5s0" ip saddr { 10.0.0.0/24 } counter accept
 
@@ -312,14 +318,16 @@
       content = ''
         chain prerouting {
           type filter hook prerouting priority raw; policy accept;
+
           iifname "lo" notrack
-          # TODO: untrack the dslite transix tunnel
+          iifname "enp4s0" ip6 saddr { 2404:8e00::feed:100, 2404:8e00::feed:101, 2404:8e00::feed:102 } ip6 nexthdr ipv4 notrack
         }
 
         chain output {
           type filter hook output priority raw; policy accept;
+
           oifname "lo" notrack
-          # TODO: untrack the dslite transix tunnel
+          oifname "enp4s0" ip6 daddr { 2404:8e00::feed:100, 2404:8e00::feed:101, 2404:8e00::feed:102 } ip6 nexthdr ipv4 notrack
         }
       '';
     };
