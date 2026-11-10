@@ -309,6 +309,22 @@
 
         chain output {
           type filter hook output priority 0; policy accept;
+
+          # stateless rules
+          oifname "lo" accept
+          oifname "enp4s0" ip6 daddr { 2404:8e00::feed:100, 2404:8e00::feed:101, 2404:8e00::feed:102 } ip6 nexthdr ipv4 accept
+
+          # conntrack
+          ct state { established, related } accept
+          ct state invalid counter drop
+
+          # stateful rules
+          meta l4proto { icmp, ipv6-icmp } counter accept
+          tcp sport 32768-60999 tcp flags syn / fin,syn,rst,ack counter accept
+          udp sport 32768-60999 counter accept
+          ip6 nexthdr udp udp sport 546 udp dport 547 counter accept comment "allow dhcpv6"
+
+          counter log prefix "output-drop: "
         }
       '';
     };
