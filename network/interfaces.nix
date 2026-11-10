@@ -22,22 +22,6 @@
       };
     };
 
-    networks."10-backup" = {
-      matchConfig.Name = "enp8s0"; # 2.5GbE port 5
-      networkConfig = {
-        DHCPServer = true;
-      };
-      dhcpServerConfig = {
-        EmitRouter = false; # not router
-        EmitDNS = false;
-        PoolOffset = 100;
-        PoolSize = 100;
-      };
-      address = [
-        "192.168.1.1/24"
-      ];
-    };
-
     networks."20-wan6" = {
       matchConfig.Name = "enp4s0"; # 2.5GbE port 1
       networkConfig = {
