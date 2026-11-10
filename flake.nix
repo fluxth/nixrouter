@@ -8,14 +8,21 @@
     sops-nix.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, sops-nix, ... }@inputs: {
-    nixosConfigurations.nixrouter = nixpkgs.lib.nixosSystem {
-      system = "x86_64-linux";
-      modules = [
-        ./hardware-configuration.nix
-        ./configuration.nix
-        sops-nix.nixosModules.sops
-      ];
+  outputs =
+    {
+      self,
+      nixpkgs,
+      sops-nix,
+      ...
+    }@inputs:
+    {
+      nixosConfigurations.nixrouter = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [
+          ./hardware-configuration.nix
+          ./configuration.nix
+          sops-nix.nixosModules.sops
+        ];
+      };
     };
-  };
 }

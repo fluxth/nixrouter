@@ -1,4 +1,10 @@
-{ config, lib, pkgs, sops-nix, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  sops-nix,
+  ...
+}:
 
 {
   # disable default dhcpcd and use systemd-networkd instead

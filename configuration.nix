@@ -1,7 +1,16 @@
-{ config, lib, pkgs, sops-nix, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  sops-nix,
+  ...
+}:
 
 {
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings.experimental-features = [
+    "nix-command"
+    "flakes"
+  ];
 
   imports = [
     ./serial.nix
