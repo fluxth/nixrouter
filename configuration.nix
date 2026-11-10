@@ -8,6 +8,7 @@
     ./network/interfaces.nix
     ./network/firewall.nix
     ./services/openssh.nix
+    ./services/dnsproxy.nix
   ];
 
   sops = {
@@ -39,26 +40,7 @@
     # TODO: reverse path filtering
   };
 
-  networking = {
-    hostName = "nixrouter";
-    nameservers = [ "::1" ];
-  };
-
-  # use dnsproxy instead
-  services.resolved.enable = false;
-
-  services.dnsproxy = {
-    enable = true;
-
-    settings = {
-      upstream = [
-        "quic://[2620:fe::fe]/dns-query"
-        "quic://[2620:fe::9]/dns-query"
-      ];
-
-      dnssec = true;
-    };
-  };
+  networking.hostName = "nixrouter";
 
   services.ndppd = {
     enable = true;
