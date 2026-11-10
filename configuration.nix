@@ -9,6 +9,7 @@
     ./network/firewall.nix
     ./services/openssh.nix
     ./services/dnsproxy.nix
+    ./services/ndppd.nix
   ];
 
   sops = {
@@ -41,19 +42,6 @@
   };
 
   networking.hostName = "nixrouter";
-
-  services.ndppd = {
-    enable = true;
-
-    proxies."enp4s0" = {
-      router = false;
-
-      rules."2409:10:720:c200::/64" = {
-        method = "iface";
-        interface = "enp5s0";
-      };
-    };
-  };
 
   time.timeZone = "Asia/Tokyo";
   i18n.defaultLocale = "en_US.UTF-8";
