@@ -2,15 +2,19 @@
 # your system. Help is available in the configuration.nix(5) man page, on
 # https://search.nixos.org/options and in the NixOS manual (`nixos-help`).
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, sops-nix, ... }:
 
 {
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
-  imports =
-    [ # Include the results of the hardware scan.
-      ./hardware-configuration.nix
-    ];
+  sops = {
+    defaultSopsFile = ./secrets/secrets.yml;
+    defaultSopsFormat = "yaml";
+
+    age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
+
+    secrets."pppoe_credentials/bbexcite" = { };
+  };
 
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
@@ -88,6 +92,64 @@
     };
   };
 
+  services.pppd = {
+    enable = true;
+    peers = {
+      bbexcite = {
+        autostart = true;
+        enable = true;
+        config = ''
+          plugin pppoe.so
+          enp4s0
+
+          file ${config.sops.secrets."pppoe_credentials/bbexcite".path}
+
+          persist
+          noipdefault
+          nodefaultroute
+          noauth
+          hide-password
+          maxfail 0
+          holdoff 10
+          mtu 1454
+
+          ifname wan4-pppoe
+        '';
+      };
+    };
+  };
+
+  environment.etc.ppp-up = {
+    enable = true;
+    target = "ppp/ip-up";
+    mode = "0755";
+    text = ''
+      #!${pkgs.bash}/bin/bash
+      ${pkgs.logger}/bin/logger "$1 is up"
+      if [ $IFNAME = "wan4-pppoe" ]; then
+        ${pkgs.logger}/bin/logger "bbexcite pppoe online, adding default route"
+
+        ${pkgs.iproute2}/bin/ip route add default dev wan4-pppoe table 20
+        ${pkgs.systemd}/bin/networkctl reconfigure wan4-pppoe
+      fi
+    '';
+  };
+
+  environment.etc.ppp-down = {
+    enable = true;
+    target = "ppp/ip-down";
+    mode = "0755";
+    text = ''
+      #!${pkgs.bash}/bin/bash
+      ${pkgs.logger}/bin/logger "$1 is down"
+      if [ $IFNAME = "wan4-pppoe" ]; then
+        ${pkgs.logger}/bin/logger "bbexcite pppoe offline, removing default route"
+
+        ${pkgs.iproute2}/bin/ip route del default dev wan4-pppoe table 20
+      fi
+    '';
+  };
+
   systemd.network = {
     enable = true;
 
@@ -146,6 +208,25 @@
       routes = [
         {
           Destination = "0.0.0.0/0";
+        }
+      ];
+    };
+
+    networks."26-wan4-pppoe" = {
+      matchConfig.Name = "wan4-pppoe";
+      linkConfig.MTUBytes = "1454";
+      linkConfig.RequiredForOnline = false;
+      networkConfig = {
+        IPv4Forwarding = false; # turn this on if want to use as a gateway for lan
+        KeepConfiguration = true; # otherwise it clears ip that pppd set
+        LinkLocalAddressing = "no";
+        IPv6AcceptRA = false;
+      };
+      # default routes are configured in ppp hooks due to race
+      routingPolicyRules = [
+        {
+          FirewallMark = "20";
+          Table = "20";
         }
       ];
     };
@@ -217,6 +298,7 @@
       git
       dig
       htop
+      sops
     ];
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILzo/1Jt86KbVV2gVFG27JqyxglPejOZrN/B6Eo/YDi5" # content of authorized_keys file
@@ -344,6 +426,23 @@
 
           oifname "lo" notrack
           oifname "enp4s0" ip6 daddr { 2404:8e00::feed:100, 2404:8e00::feed:101, 2404:8e00::feed:102 } ip6 nexthdr ipv4 notrack
+        }
+      '';
+    };
+
+    tables.mangle = {
+      family = "inet";
+      content = ''
+        chain prerouting {
+          type filter hook prerouting priority mangle; policy accept;
+
+          iifname "wan4-pppoe" ct state new ct mark set 20 counter
+        }
+
+        chain output {
+          type route hook output priority mangle; policy accept;
+
+          ct mark 20 meta mark set ct mark counter
         }
       '';
     };

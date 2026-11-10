@@ -1,0 +1,7 @@
+keys:
+  - &nixrouter age1tt6fq6fgt2dys0069nkh47z39jzqhpscgjts9u3w9razyxmqppfsx4z3qz
+creation_rules:
+  - path_regex: "secrets/secrets.yml$"
+    key_groups:
+      - age:
+          - *nixrouter
