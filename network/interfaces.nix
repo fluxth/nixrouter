@@ -8,7 +8,7 @@
   systemd.network = {
     enable = true;
 
-    netdevs."15-dslite" = {
+    netdevs."100-wan4-dslite" = {
       netdevConfig = {
         Name = "wan4-dslite";
         Kind = "ip6tnl";
@@ -22,7 +22,7 @@
       };
     };
 
-    networks."20-wan6" = {
+    networks."200-wan6" = {
       matchConfig.Name = "enp4s0"; # 2.5GbE port 1
       networkConfig = {
         IPv6AcceptRA = "yes";
@@ -37,7 +37,7 @@
       };
     };
 
-    networks."25-wan4-dslite" = {
+    networks."210-wan4-dslite" = {
       matchConfig.Name = "wan4-dslite";
       linkConfig.MTUBytes = "1460";
       networkConfig = {
@@ -51,7 +51,7 @@
       ];
     };
 
-    networks."26-wan4-pppoe" = {
+    networks."220-wan4-pppoe" = {
       matchConfig.Name = "wan4-pppoe";
       linkConfig.MTUBytes = "1454";
       linkConfig.RequiredForOnline = false;
@@ -70,7 +70,7 @@
       ];
     };
 
-    networks."30-lan" = {
+    networks."300-lan" = {
       matchConfig.Name = "enp5s0"; # 2.5GbE port 2
       networkConfig = {
         IPv6SendRA = true;
@@ -104,7 +104,7 @@
       ];
     };
 
-    networks."90-labwan" = {
+    networks."310-labwan" = {
       matchConfig.Name = "enp7s0"; # 2.5GbE port 4
       networkConfig = {
         IPv6AcceptRA = "yes";
