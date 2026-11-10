@@ -5,6 +5,7 @@
 
   imports = [
     ./network/interfaces.nix
+    ./network/firewall.nix
   ];
 
   sops = {
@@ -158,108 +159,6 @@
       HostKeyAlgorithms ssh-ed25519
       PubkeyAcceptedKeyTypes ssh-ed25519
     '';
-  };
-
-  networking.firewall.enable = false;
-  networking.nftables = {
-    enable = true;
-    tables.firewall = {
-      family = "inet";
-      content = ''
-        chain input {
-          type filter hook input priority 0; policy drop;
-
-          # stateless rules
-          iifname "lo" accept
-          iifname "enp4s0" ip6 saddr { 2404:8e00::feed:100, 2404:8e00::feed:101, 2404:8e00::feed:102 } ip6 nexthdr ipv4 accept
-
-          # conntrack
-          ct state { established, related } accept
-          ct state invalid counter drop
-
-          # stateful rules
-          meta l4proto { icmp, ipv6-icmp } counter accept
-          tcp dport 22 accept
-          iifname "enp5s0" udp dport 67 accept
-          iifname "enp5s0" udp dport 53 accept
-
-          counter
-        }
-
-        chain forward {
-          type filter hook forward priority 0; policy drop;
-
-          # conntrack
-          ct state { established, related } accept
-          ct state invalid counter drop
-
-          # ds-lite MSS clamping
-          oifname "wan4-dslite" meta nfproto ipv4 tcp flags syn tcp option maxseg size set rt mtu counter
-
-          # stateful rules
-          iifname "enp5s0" ip6 saddr { 2409:10:720:c200::/64 } counter accept
-          iifname "enp5s0" ip saddr { 10.0.0.0/24 } counter accept
-
-          counter
-        }
-
-        chain output {
-          type filter hook output priority 0; policy accept;
-
-          # stateless rules
-          oifname "lo" accept
-          oifname "enp4s0" ip6 daddr { 2404:8e00::feed:100, 2404:8e00::feed:101, 2404:8e00::feed:102 } ip6 nexthdr ipv4 accept
-
-          # conntrack
-          ct state { established, related } accept
-          ct state invalid counter drop
-
-          # stateful rules
-          meta l4proto { icmp, ipv6-icmp } counter accept
-          tcp sport 32768-60999 tcp flags syn / fin,syn,rst,ack counter accept
-          udp sport 32768-60999 counter accept
-          ip6 nexthdr udp udp sport 546 udp dport 547 counter accept comment "allow dhcpv6"
-
-          counter log prefix "output-drop: "
-        }
-      '';
-    };
-
-    tables.raw = {
-      family = "inet";
-      content = ''
-        chain prerouting {
-          type filter hook prerouting priority raw; policy accept;
-
-          iifname "lo" notrack
-          iifname "enp4s0" ip6 saddr { 2404:8e00::feed:100, 2404:8e00::feed:101, 2404:8e00::feed:102 } ip6 nexthdr ipv4 notrack
-        }
-
-        chain output {
-          type filter hook output priority raw; policy accept;
-
-          oifname "lo" notrack
-          oifname "enp4s0" ip6 daddr { 2404:8e00::feed:100, 2404:8e00::feed:101, 2404:8e00::feed:102 } ip6 nexthdr ipv4 notrack
-        }
-      '';
-    };
-
-    tables.mangle = {
-      family = "inet";
-      content = ''
-        chain prerouting {
-          type filter hook prerouting priority mangle; policy accept;
-
-          iifname "wan4-pppoe" ct state new ct mark set 20 counter
-        }
-
-        chain output {
-          type route hook output priority mangle; policy accept;
-
-          ct mark 20 meta mark set ct mark counter
-        }
-      '';
-    };
   };
 
   # Copy the NixOS configuration file and link it from the resulting system
