@@ -23,7 +23,7 @@ table inet filter {
 
     # stateful rules
     meta l4proto { icmp, ipv6-icmp } counter accept
-    tcp dport 22 accept
+    tcp dport 22 tcp flags syn / fin,syn,rst,ack accept
     iifname $lan_iface udp dport 67 accept
     iifname $lan_iface udp dport 53 accept
 
