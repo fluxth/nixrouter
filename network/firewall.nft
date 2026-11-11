@@ -60,6 +60,9 @@ table inet filter {
   chain forward_lan_wan {
     tcp flags syn tcp option maxseg size set rt mtu counter comment "tcp mss clamping"
 
+    # block transix tunnel from lan as it can be used to bypass firewall
+    ip6 daddr $transix_endpoints ip6 nexthdr ipv4 drop
+
     ip6 saddr $lan_ipv6_prefix counter jump upstream_send
     ip saddr $lan_ipv4_prefix counter jump upstream_send
 
