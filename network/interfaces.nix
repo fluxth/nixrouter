@@ -14,6 +14,21 @@ in
   networking.useDHCP = false;
   networking.useNetworkd = true;
 
+  # NOTE: in a perfect world the forwarding,proxy_ndp ones would be set per
+  # interface by networkd and these wouldn't be needed, but we are in a meat
+  # world where we have to proxy ndp and ndppd requires these to be set.
+  # Reference: https://docs.kernel.org/networking/ip-sysctl.html
+  boot.kernel.sysctl = {
+    "net.ipv4.conf.all.forwarding" = true;
+    "net.ipv6.conf.all.forwarding" = true;
+
+    "net.ipv4.conf.all.arp_filter" = true;
+    "net.ipv4.conf.default.arp_filter" = true;
+
+    "net.ipv6.conf.enp4s0.proxy_ndp" = true;
+    "net.ipv6.conf.enp5s0.proxy_ndp" = true;
+  };
+
   systemd.network = {
     enable = true;
 
@@ -34,8 +49,10 @@ in
     networks."200-wan6" = {
       matchConfig.Name = constants.wanIface;
       networkConfig = {
-        IPv6AcceptRA = "yes";
         IPv6Forwarding = true;
+        IPv6ProxyNDP = true;
+
+        IPv6AcceptRA = true;
         IPv6LinkLocalAddressGenerationMode = "stable-privacy";
         IPv6PrivacyExtensions = true;
         Tunnel = constants.transixIface;
@@ -66,6 +83,7 @@ in
       linkConfig.RequiredForOnline = false;
       networkConfig = {
         IPv4Forwarding = false; # turn this on if want to use as a gateway for lan
+
         KeepConfiguration = true; # otherwise it clears ip that pppd set
         LinkLocalAddressing = "no";
         IPv6AcceptRA = false;
@@ -82,11 +100,13 @@ in
     networks."300-lan" = {
       matchConfig.Name = constants.lanIface;
       networkConfig = {
+        IPv6Forwarding = true;
+        IPv4Forwarding = true;
+        IPv6ProxyNDP = true;
+
         IPv6SendRA = true;
         IPv6AcceptRA = false;
         DHCPServer = true;
-        IPv4Forwarding = true;
-        IPv6Forwarding = true;
       };
       address = [
         constants.lanIpv6HostPrefix

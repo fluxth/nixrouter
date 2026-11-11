@@ -37,17 +37,6 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  boot.kernel.sysctl = {
-    "net.ipv4.conf.all.forwarding" = true;
-    "net.ipv6.conf.all.forwarding" = true;
-
-    "net.ipv4.conf.all.arp_filter" = 1;
-    "net.ipv4.conf.default.arp_filter" = 1;
-
-    "net.ipv6.conf.enp4s0.proxy_ndp" = 1;
-    "net.ipv6.conf.enp5s0.proxy_ndp" = 1;
-  };
-
   networking.hostName = "nixrouter";
 
   time.timeZone = "Asia/Tokyo";
