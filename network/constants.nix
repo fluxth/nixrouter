@@ -14,10 +14,12 @@ rec {
   lanIpv4HostPrefix = "${lanIpv4Host}/24";
 
   transixIface = "wan4-dslite";
+  transixMTU = "1460"; # ipv4 over ipv6
   transixEndpointSet = "{ 2404:8e00::feed:100, 2404:8e00::feed:101, 2404:8e00::feed:102 }"; # nft set, for firewall
   transixEndpoint = "2404:8e00::feed:101"; # the one to use
 
   pppoeIface = "wan4-pppoe";
+  pppoeMTU = "1454"; # because NGN black magic tunneling thingy
   pppoeConntrackMark = "20";
   pppoeFirewallMark = "20";
   pppoeRouteTable = "20";

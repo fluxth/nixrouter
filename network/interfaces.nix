@@ -26,7 +26,7 @@ in
         Mode = "ipip6";
         Local = "slaac";
         Remote = constants.transixEndpoint;
-        EncapsulationLimit = "none"; # otherwise the MTU drops to 1452
+        EncapsulationLimit = "none"; # otherwise the MTU drops by 8 bytes (1460 to 1452)
         DiscoverPathMTU = true;
       };
     };
@@ -48,7 +48,7 @@ in
 
     networks."210-wan4-dslite" = {
       matchConfig.Name = constants.transixIface;
-      linkConfig.MTUBytes = "1460";
+      linkConfig.MTUBytes = constants.transixMTU;
       networkConfig = {
         IPv4Forwarding = true;
       };
@@ -62,7 +62,7 @@ in
 
     networks."220-wan4-pppoe" = {
       matchConfig.Name = constants.pppoeIface;
-      linkConfig.MTUBytes = "1454"; # because NGN black magic tunneling thingy
+      linkConfig.MTUBytes = constants.pppoeMTU;
       linkConfig.RequiredForOnline = false;
       networkConfig = {
         IPv4Forwarding = false; # turn this on if want to use as a gateway for lan
@@ -140,7 +140,7 @@ in
           hide-password
           maxfail 0
           holdoff 10
-          mtu 1454
+          mtu ${constants.pppoeMTU}
 
           ifname ${constants.pppoeIface}
         '';
