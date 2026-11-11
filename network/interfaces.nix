@@ -6,6 +6,26 @@
   ...
 }:
 
+let
+  upstreamDelegatedPrefix = "2409:10:720:c200";
+  upstreamDelegatedPrefixSize = "64"; # without hikari denwa, there is no /56 prefix delegation :(
+
+  wanIface = "enp4s0"; # 2.5GbE port 1
+  wanIpv6Prefix = "${upstreamDelegatedPrefix}::/${upstreamDelegatedPrefixSize}";
+
+  lanIface = "enp5s0"; # 2.5GbE port 2
+  lanIpv6Host = "${upstreamDelegatedPrefix}::1";
+  lanIpv6HostPrefix = "${lanIpv6Host}/${upstreamDelegatedPrefixSize}";
+  lanIpv4Host = "172.24.100.254";
+  lanIpv4HostPrefix = "${lanIpv4Host}/24";
+
+  transixIface = "wan4-dslite";
+  transixEndpoint = "2404:8e00::feed:101"; # 100-102, just pick one
+
+  pppoeIface = "wan4-pppoe";
+  pppoeFirewallMark = "20";
+  pppoeRouteTable = "20";
+in
 {
   # disable default dhcpcd and use systemd-networkd instead
   networking.useDHCP = false;
@@ -16,26 +36,26 @@
 
     netdevs."100-wan4-dslite" = {
       netdevConfig = {
-        Name = "wan4-dslite";
+        Name = transixIface;
         Kind = "ip6tnl";
       };
       tunnelConfig = {
         Mode = "ipip6";
         Local = "slaac";
-        Remote = "2404:8e00::feed:101";
+        Remote = transixEndpoint;
         EncapsulationLimit = "none"; # otherwise the MTU drops to 1452
         DiscoverPathMTU = true;
       };
     };
 
     networks."200-wan6" = {
-      matchConfig.Name = "enp4s0"; # 2.5GbE port 1
+      matchConfig.Name = wanIface;
       networkConfig = {
         IPv6AcceptRA = "yes";
         IPv6Forwarding = true;
         IPv6LinkLocalAddressGenerationMode = "stable-privacy";
         IPv6PrivacyExtensions = true;
-        Tunnel = "wan4-dslite";
+        Tunnel = transixIface;
       };
       ipv6AcceptRAConfig = {
         UseOnLinkPrefix = false;
@@ -44,7 +64,7 @@
     };
 
     networks."210-wan4-dslite" = {
-      matchConfig.Name = "wan4-dslite";
+      matchConfig.Name = transixIface;
       linkConfig.MTUBytes = "1460";
       networkConfig = {
         IPv4Forwarding = true;
@@ -58,8 +78,8 @@
     };
 
     networks."220-wan4-pppoe" = {
-      matchConfig.Name = "wan4-pppoe";
-      linkConfig.MTUBytes = "1454";
+      matchConfig.Name = pppoeIface;
+      linkConfig.MTUBytes = "1454"; # because NGN black magic tunneling thingy
       linkConfig.RequiredForOnline = false;
       networkConfig = {
         IPv4Forwarding = false; # turn this on if want to use as a gateway for lan
@@ -70,14 +90,14 @@
       # default routes are configured in ppp hooks due to race
       routingPolicyRules = [
         {
-          FirewallMark = "20";
-          Table = "20";
+          FirewallMark = pppoeFirewallMark;
+          Table = pppoeRouteTable;
         }
       ];
     };
 
     networks."300-lan" = {
-      matchConfig.Name = "enp5s0"; # 2.5GbE port 2
+      matchConfig.Name = lanIface;
       networkConfig = {
         IPv6SendRA = true;
         IPv6AcceptRA = false;
@@ -86,30 +106,29 @@
         IPv6Forwarding = true;
       };
       address = [
-        "2409:10:720:c200::1/64"
-        "10.0.0.1/24"
+        lanIpv6HostPrefix
+        lanIpv4HostPrefix
       ];
       dhcpServerConfig = {
         EmitRouter = true;
         EmitDNS = true;
-        PoolOffset = 100;
-        PoolSize = 100;
-        DNS = [
-          "10.0.0.1"
-        ];
+        PoolOffset = 0;
+        PoolSize = 200;
+        DNS = [ lanIpv4Host ];
       };
       ipv6SendRAConfig = {
-        DNS = [ "2409:10:720:c200::1" ];
+        DNS = [ lanIpv6Host ];
       };
       ipv6Prefixes = [
         {
-          Prefix = "2409:10:720:c200::/64";
+          Prefix = wanIpv6Prefix;
           OnLink = true;
           AddressAutoconfiguration = true;
         }
       ];
     };
 
+    # temporary
     networks."310-labwan" = {
       matchConfig.Name = "enp7s0"; # 2.5GbE port 4
       networkConfig = {
@@ -127,7 +146,7 @@
         enable = true;
         config = ''
           plugin pppoe.so
-          enp4s0
+          ${wanIface}
 
           file ${config.sops.secrets."pppoe_credentials/bbexcite".path}
 
@@ -140,7 +159,7 @@
           holdoff 10
           mtu 1454
 
-          ifname wan4-pppoe
+          ifname ${pppoeIface}
         '';
       };
     };
@@ -156,11 +175,11 @@
     text = ''
       #!${pkgs.bash}/bin/bash
       ${pkgs.logger}/bin/logger "$1 is up"
-      if [ $IFNAME = "wan4-pppoe" ]; then
-        ${pkgs.logger}/bin/logger "bbexcite pppoe online, adding default route"
+      if [ $IFNAME = "${pppoeIface}" ]; then
+        ${pkgs.logger}/bin/logger "${pppoeIface} online, adding default route"
 
-        ${pkgs.iproute2}/bin/ip route add default dev wan4-pppoe table 20
-        ${pkgs.systemd}/bin/networkctl reconfigure wan4-pppoe
+        ${pkgs.iproute2}/bin/ip route add default dev ${pppoeIface} table ${pppoeRouteTable}
+        ${pkgs.systemd}/bin/networkctl reconfigure ${pppoeIface}
       fi
     '';
   };
@@ -172,10 +191,10 @@
     text = ''
       #!${pkgs.bash}/bin/bash
       ${pkgs.logger}/bin/logger "$1 is down"
-      if [ $IFNAME = "wan4-pppoe" ]; then
-        ${pkgs.logger}/bin/logger "bbexcite pppoe offline, removing default route"
+      if [ $IFNAME = "${pppoeIface}" ]; then
+        ${pkgs.logger}/bin/logger "${pppoeIface} offline, removing default route"
 
-        ${pkgs.iproute2}/bin/ip route del default dev wan4-pppoe table 20
+        ${pkgs.iproute2}/bin/ip route del default dev ${pppoeIface} table ${pppoeRouteTable}
       fi
     '';
   };
