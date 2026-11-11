@@ -146,6 +146,9 @@
     };
   };
 
+  # default was 1m30s, too long since we don't depend on pppoe on ipoe side
+  systemd.services."pppd-bbexcite".serviceConfig.TimeoutStartSec = "15s";
+
   environment.etc.ppp-up = {
     enable = true;
     target = "ppp/ip-up";
