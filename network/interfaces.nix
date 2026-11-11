@@ -110,15 +110,6 @@ in
         }
       ];
     };
-
-    # temporary
-    networks."310-labwan" = {
-      matchConfig.Name = "enp7s0"; # 2.5GbE port 4
-      networkConfig = {
-        IPv6AcceptRA = "yes";
-        DHCP = "yes";
-      };
-    };
   };
 
   services.pppd = {
