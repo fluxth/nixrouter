@@ -1,13 +1,4 @@
-define transix_iface = "wan4-dslite"
-define transix_endpoints = { 2404:8e00::feed:100, 2404:8e00::feed:101, 2404:8e00::feed:102 }
-
-define wan_iface = "enp4s0"
-define lan_iface = "enp5s0"
-define lan_ipv6_prefix = 2409:10:720:c200::/64
-define lan_ipv4_prefix = 172.24.100.0/24
-
-define pppoe_iface = "wan4-pppoe"
-define pppoe_ct_mark = 20
+# flush and defines are in external file firewall.nix
 
 table inet filter {
   chain input {

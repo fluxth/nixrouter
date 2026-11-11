@@ -5,16 +5,19 @@
   ...
 }:
 
+let
+  constants = import ../network/constants.nix;
+in
 {
   services.ndppd = {
     enable = true;
 
-    proxies."enp4s0" = {
+    proxies."${constants.wanIface}" = {
       router = false;
 
-      rules."2409:10:720:c200::/64" = {
+      rules."${constants.wanIpv6Prefix}" = {
         method = "iface";
-        interface = "enp5s0";
+        interface = constants.lanIface;
       };
     };
   };

@@ -7,24 +7,7 @@
 }:
 
 let
-  upstreamDelegatedPrefix = "2409:10:720:c200";
-  upstreamDelegatedPrefixSize = "64"; # without hikari denwa, there is no /56 prefix delegation :(
-
-  wanIface = "enp4s0"; # 2.5GbE port 1
-  wanIpv6Prefix = "${upstreamDelegatedPrefix}::/${upstreamDelegatedPrefixSize}";
-
-  lanIface = "enp5s0"; # 2.5GbE port 2
-  lanIpv6Host = "${upstreamDelegatedPrefix}::1";
-  lanIpv6HostPrefix = "${lanIpv6Host}/${upstreamDelegatedPrefixSize}";
-  lanIpv4Host = "172.24.100.254";
-  lanIpv4HostPrefix = "${lanIpv4Host}/24";
-
-  transixIface = "wan4-dslite";
-  transixEndpoint = "2404:8e00::feed:101"; # 100-102, just pick one
-
-  pppoeIface = "wan4-pppoe";
-  pppoeFirewallMark = "20";
-  pppoeRouteTable = "20";
+  constants = import ./constants.nix;
 in
 {
   # disable default dhcpcd and use systemd-networkd instead
@@ -36,26 +19,26 @@ in
 
     netdevs."100-wan4-dslite" = {
       netdevConfig = {
-        Name = transixIface;
+        Name = constants.transixIface;
         Kind = "ip6tnl";
       };
       tunnelConfig = {
         Mode = "ipip6";
         Local = "slaac";
-        Remote = transixEndpoint;
+        Remote = constants.transixEndpoint;
         EncapsulationLimit = "none"; # otherwise the MTU drops to 1452
         DiscoverPathMTU = true;
       };
     };
 
     networks."200-wan6" = {
-      matchConfig.Name = wanIface;
+      matchConfig.Name = constants.wanIface;
       networkConfig = {
         IPv6AcceptRA = "yes";
         IPv6Forwarding = true;
         IPv6LinkLocalAddressGenerationMode = "stable-privacy";
         IPv6PrivacyExtensions = true;
-        Tunnel = transixIface;
+        Tunnel = constants.transixIface;
       };
       ipv6AcceptRAConfig = {
         UseOnLinkPrefix = false;
@@ -64,7 +47,7 @@ in
     };
 
     networks."210-wan4-dslite" = {
-      matchConfig.Name = transixIface;
+      matchConfig.Name = constants.transixIface;
       linkConfig.MTUBytes = "1460";
       networkConfig = {
         IPv4Forwarding = true;
@@ -78,7 +61,7 @@ in
     };
 
     networks."220-wan4-pppoe" = {
-      matchConfig.Name = pppoeIface;
+      matchConfig.Name = constants.pppoeIface;
       linkConfig.MTUBytes = "1454"; # because NGN black magic tunneling thingy
       linkConfig.RequiredForOnline = false;
       networkConfig = {
@@ -90,14 +73,14 @@ in
       # default routes are configured in ppp hooks due to race
       routingPolicyRules = [
         {
-          FirewallMark = pppoeFirewallMark;
-          Table = pppoeRouteTable;
+          FirewallMark = constants.pppoeFirewallMark;
+          Table = constants.pppoeRouteTable;
         }
       ];
     };
 
     networks."300-lan" = {
-      matchConfig.Name = lanIface;
+      matchConfig.Name = constants.lanIface;
       networkConfig = {
         IPv6SendRA = true;
         IPv6AcceptRA = false;
@@ -106,22 +89,22 @@ in
         IPv6Forwarding = true;
       };
       address = [
-        lanIpv6HostPrefix
-        lanIpv4HostPrefix
+        constants.lanIpv6HostPrefix
+        constants.lanIpv4HostPrefix
       ];
       dhcpServerConfig = {
         EmitRouter = true;
         EmitDNS = true;
         PoolOffset = 0;
         PoolSize = 200;
-        DNS = [ lanIpv4Host ];
+        DNS = [ constants.lanIpv4Host ];
       };
       ipv6SendRAConfig = {
-        DNS = [ lanIpv6Host ];
+        DNS = [ constants.lanIpv6Host ];
       };
       ipv6Prefixes = [
         {
-          Prefix = wanIpv6Prefix;
+          Prefix = constants.wanIpv6Prefix;
           OnLink = true;
           AddressAutoconfiguration = true;
         }
@@ -146,7 +129,7 @@ in
         enable = true;
         config = ''
           plugin pppoe.so
-          ${wanIface}
+          ${constants.wanIface}
 
           file ${config.sops.secrets."pppoe_credentials/bbexcite".path}
 
@@ -159,7 +142,7 @@ in
           holdoff 10
           mtu 1454
 
-          ifname ${pppoeIface}
+          ifname ${constants.pppoeIface}
         '';
       };
     };
@@ -175,11 +158,11 @@ in
     text = ''
       #!${pkgs.bash}/bin/bash
       ${pkgs.logger}/bin/logger "$1 is up"
-      if [ $IFNAME = "${pppoeIface}" ]; then
-        ${pkgs.logger}/bin/logger "${pppoeIface} online, adding default route"
+      if [ $IFNAME = "${constants.pppoeIface}" ]; then
+        ${pkgs.logger}/bin/logger "${constants.pppoeIface} online, adding default route"
 
-        ${pkgs.iproute2}/bin/ip route add default dev ${pppoeIface} table ${pppoeRouteTable}
-        ${pkgs.systemd}/bin/networkctl reconfigure ${pppoeIface}
+        ${pkgs.iproute2}/bin/ip route add default dev ${constants.pppoeIface} table ${constants.pppoeRouteTable}
+        ${pkgs.systemd}/bin/networkctl reconfigure ${constants.pppoeIface}
       fi
     '';
   };
@@ -191,10 +174,10 @@ in
     text = ''
       #!${pkgs.bash}/bin/bash
       ${pkgs.logger}/bin/logger "$1 is down"
-      if [ $IFNAME = "${pppoeIface}" ]; then
-        ${pkgs.logger}/bin/logger "${pppoeIface} offline, removing default route"
+      if [ $IFNAME = "${constants.pppoeIface}" ]; then
+        ${pkgs.logger}/bin/logger "${constants.pppoeIface} offline, removing default route"
 
-        ${pkgs.iproute2}/bin/ip route del default dev ${pppoeIface} table ${pppoeRouteTable}
+        ${pkgs.iproute2}/bin/ip route del default dev ${constants.pppoeIface} table ${constants.pppoeRouteTable}
       fi
     '';
   };
