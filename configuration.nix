@@ -46,8 +46,6 @@
 
     "net.ipv6.conf.enp4s0.proxy_ndp" = 1;
     "net.ipv6.conf.enp5s0.proxy_ndp" = 1;
-
-    # TODO: reverse path filtering
   };
 
   networking.hostName = "nixrouter";
