@@ -10,6 +10,10 @@ let
   firewallRuleset = builtins.readFile ./firewall.nft;
 in
 {
+  # keep kernel config in sync with the firewall
+  boot.kernel.sysctl."net.ipv4.ip_local_port_range" =
+    "${constants.selfEphemeralPortStart} ${constants.selfEphemeralPortEnd}";
+
   # disable nixos default firewall, use raw netfilter instead
   networking.firewall.enable = false;
   networking.nftables = {
@@ -31,6 +35,8 @@ in
 
       define zone_wan_ifaces = { $wan_iface, $transix_iface, $pppoe_iface }
       define zone_lan_ifaces = { $lan_iface }
+
+      define self_ephemeral_port_range = ${constants.selfEphemeralPortStart}-${constants.selfEphemeralPortEnd}
 
       # firewall rules are in external file firewall.nft
       ${firewallRuleset}

@@ -23,4 +23,7 @@ rec {
   pppoeConntrackMark = "20";
   pppoeFirewallMark = "20";
   pppoeRouteTable = "20";
+
+  selfEphemeralPortStart = "32768";
+  selfEphemeralPortEnd = "60999";
 }
