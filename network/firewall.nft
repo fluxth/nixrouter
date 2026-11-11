@@ -1,10 +1,21 @@
+define transix_iface = "wan4-dslite"
+define transix_endpoints = { 2404:8e00::feed:100, 2404:8e00::feed:101, 2404:8e00::feed:102 }
+
+define wan_iface = "enp4s0"
+define lan_iface = "enp5s0"
+define lan_ipv6_prefix = 2409:10:720:c200::/64
+define lan_ipv4_prefix = 172.24.100.0/24
+
+define pppoe_iface = "wan4-pppoe"
+define pppoe_ct_mark = 20
+
 table inet filter {
   chain input {
     type filter hook input priority filter; policy drop;
 
     # stateless rules
     iifname "lo" accept
-    iifname "enp4s0" ip6 saddr { 2404:8e00::feed:100, 2404:8e00::feed:101, 2404:8e00::feed:102 } ip6 nexthdr ipv4 accept
+    iifname $wan_iface ip6 saddr $transix_endpoints ip6 nexthdr ipv4 accept
 
     # conntrack
     ct state { established, related } accept
@@ -13,8 +24,8 @@ table inet filter {
     # stateful rules
     meta l4proto { icmp, ipv6-icmp } counter accept
     tcp dport 22 accept
-    iifname "enp5s0" udp dport 67 accept
-    iifname "enp5s0" udp dport 53 accept
+    iifname $lan_iface udp dport 67 accept
+    iifname $lan_iface udp dport 53 accept
 
     counter
   }
@@ -27,11 +38,11 @@ table inet filter {
     ct state invalid counter drop
 
     # ds-lite MSS clamping
-    oifname "wan4-dslite" meta nfproto ipv4 tcp flags syn tcp option maxseg size set rt mtu counter
+    oifname $transix_iface meta nfproto ipv4 tcp flags syn tcp option maxseg size set rt mtu counter
 
     # stateful rules
-    iifname "enp5s0" ip6 saddr { 2409:10:720:c200::/64 } counter accept
-    iifname "enp5s0" ip saddr { 172.24.100.0/24 } counter accept
+    iifname $lan_iface ip6 saddr $lan_ipv6_prefix counter accept
+    iifname $lan_iface ip saddr $lan_ipv4_prefix counter accept
 
     counter
   }
@@ -41,7 +52,7 @@ table inet filter {
 
     # stateless rules
     oifname "lo" accept
-    oifname "enp4s0" ip6 daddr { 2404:8e00::feed:100, 2404:8e00::feed:101, 2404:8e00::feed:102 } ip6 nexthdr ipv4 accept
+    oifname $wan_iface ip6 daddr $transix_endpoints ip6 nexthdr ipv4 accept
 
     # conntrack
     ct state { established, related } accept
@@ -62,14 +73,14 @@ table inet raw {
     type filter hook prerouting priority raw; policy accept;
 
     iifname "lo" notrack
-    iifname "enp4s0" ip6 saddr { 2404:8e00::feed:100, 2404:8e00::feed:101, 2404:8e00::feed:102 } ip6 nexthdr ipv4 notrack
+    iifname $wan_iface ip6 saddr $transix_endpoints ip6 nexthdr ipv4 notrack
   }
 
   chain output {
     type filter hook output priority raw; policy accept;
 
     oifname "lo" notrack
-    oifname "enp4s0" ip6 daddr { 2404:8e00::feed:100, 2404:8e00::feed:101, 2404:8e00::feed:102 } ip6 nexthdr ipv4 notrack
+    oifname $wan_iface ip6 daddr $transix_endpoints ip6 nexthdr ipv4 notrack
   }
 }
 
@@ -77,12 +88,12 @@ table inet mangle {
   chain prerouting {
     type filter hook prerouting priority mangle; policy accept;
 
-    iifname "wan4-pppoe" ct state new ct mark set 20 counter
+    iifname $pppoe_iface ct state new ct mark set $pppoe_ct_mark counter
   }
 
   chain output {
     type route hook output priority mangle; policy accept;
 
-    ct mark 20 meta mark set ct mark counter
+    ct mark $pppoe_ct_mark meta mark set ct mark counter
   }
 }
