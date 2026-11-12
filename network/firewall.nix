@@ -39,9 +39,18 @@ in
       define self_ephemeral_port_range = ${constants.selfEphemeralPortStart}-${constants.selfEphemeralPortEnd}
 
       # firewall rules are in external files in network/nftables directory
-      include "${builtins.toFile "firewall-filter.nft" (builtins.readFile ./nftables/filter.nft)}"
-      include "${builtins.toFile "firewall-raw.nft" (builtins.readFile ./nftables/raw.nft)}"
-      include "${builtins.toFile "firewall-mangle.nft" (builtins.readFile ./nftables/mangle.nft)}"
+
+      table inet filter {
+        include "${builtins.toFile "firewall-filter.nft" (builtins.readFile ./nftables/filter.nft)}"
+      }
+
+      table inet raw {
+        include "${builtins.toFile "firewall-raw.nft" (builtins.readFile ./nftables/raw.nft)}"
+      }
+
+      table inet mangle {
+        include "${builtins.toFile "firewall-mangle.nft" (builtins.readFile ./nftables/mangle.nft)}"
+      }
     '';
   };
 }

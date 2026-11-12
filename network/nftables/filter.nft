@@ -1,123 +1,121 @@
-table inet filter {
-  chain prerouting {
-    type filter hook prerouting priority filter; policy accept;
+chain prerouting {
+  type filter hook prerouting priority filter; policy accept;
 
-    fib saddr . mark . iif oif eq 0 counter drop comment "strict reverse path filter"
-  };
+  fib saddr . mark . iif oif eq 0 counter drop comment "strict reverse path filter"
+};
 
-  chain input {
-    type filter hook input priority filter; policy drop;
+chain input {
+  type filter hook input priority filter; policy drop;
 
-    # stateless rules
-    iif "lo" accept
-    iifname $wan_iface ip6 saddr $transix_endpoints ip6 nexthdr ipv4 accept
+  # stateless rules
+  iif "lo" accept
+  iifname $wan_iface ip6 saddr $transix_endpoints ip6 nexthdr ipv4 accept
 
-    # conntrack
-    ct state { established, related } accept
-    ct state invalid counter drop
+  # conntrack
+  ct state { established, related } accept
+  ct state invalid counter drop
 
-    # zone based stateful rules
-    iifname $zone_lan_ifaces counter jump input_lan
-    iifname $zone_wan_ifaces counter jump input_wan
+  # zone based stateful rules
+  iifname $zone_lan_ifaces counter jump input_lan
+  iifname $zone_wan_ifaces counter jump input_wan
 
-    counter reject
-  }
+  counter reject
+}
 
-  # zone: lan -> router
-  chain input_lan {
-    meta l4proto { icmp, ipv6-icmp } counter accept
+# zone: lan -> router
+chain input_lan {
+  meta l4proto { icmp, ipv6-icmp } counter accept
 
-    udp dport 53 accept comment "allow dns"
-    udp sport 68 udp dport 67 accept comment "allow dhcp"
+  udp dport 53 accept comment "allow dns"
+  udp sport 68 udp dport 67 accept comment "allow dhcp"
 
-    tcp dport 22 tcp flags syn / fin,syn,rst,ack accept comment "allow ssh"
+  tcp dport 22 tcp flags syn / fin,syn,rst,ack accept comment "allow ssh"
 
-    counter reject
-  }
+  counter reject
+}
 
-  # zone: wan -> router
-  chain input_wan {
-    # TODO: tighten this down
-    meta l4proto { icmp, ipv6-icmp } counter accept
+# zone: wan -> router
+chain input_wan {
+  # TODO: tighten this down
+  meta l4proto { icmp, ipv6-icmp } counter accept
 
-    # TODO: temporary until wireguard, do not allow from ipv4 due to frequent port scans
-    meta nfproto ipv6 tcp dport 22 tcp flags syn / fin,syn,rst,ack counter accept comment "allow ssh"
+  # TODO: temporary until wireguard, do not allow from ipv4 due to frequent port scans
+  meta nfproto ipv6 tcp dport 22 tcp flags syn / fin,syn,rst,ack counter accept comment "allow ssh"
 
-    counter drop
-  }
+  counter drop
+}
 
-  chain forward {
-    type filter hook forward priority filter; policy drop;
+chain forward {
+  type filter hook forward priority filter; policy drop;
 
-    # conntrack
-    ct state { established, related } accept
-    ct state invalid counter drop
+  # conntrack
+  ct state { established, related } accept
+  ct state invalid counter drop
 
-    # zone based stateful rules
-    iifname $zone_lan_ifaces oifname $zone_wan_ifaces counter jump forward_lan_wan
-    iifname $zone_wan_ifaces oifname $zone_lan_ifaces counter jump forward_wan_lan
+  # zone based stateful rules
+  iifname $zone_lan_ifaces oifname $zone_wan_ifaces counter jump forward_lan_wan
+  iifname $zone_wan_ifaces oifname $zone_lan_ifaces counter jump forward_wan_lan
 
-    counter reject
-  }
+  counter reject
+}
 
-  # zone: lan -> wan
-  chain forward_lan_wan {
-    tcp flags syn tcp option maxseg size set rt mtu counter comment "tcp mss clamping"
+# zone: lan -> wan
+chain forward_lan_wan {
+  tcp flags syn tcp option maxseg size set rt mtu counter comment "tcp mss clamping"
 
-    # block transix tunnel from lan as it can be used to bypass firewall
-    ip6 daddr $transix_endpoints ip6 nexthdr ipv4 drop
+  # block transix tunnel from lan as it can be used to bypass firewall
+  ip6 daddr $transix_endpoints ip6 nexthdr ipv4 drop
 
-    ip6 saddr $lan_ipv6_prefix counter accept
-    ip saddr $lan_ipv4_prefix counter accept
+  ip6 saddr $lan_ipv6_prefix counter accept
+  ip saddr $lan_ipv4_prefix counter accept
 
-    counter reject
-  }
+  counter reject
+}
 
-  # zone: wan -> lan
-  chain forward_wan_lan {
-    # TODO: tighten this down
-    meta l4proto { icmp, ipv6-icmp } counter accept
+# zone: wan -> lan
+chain forward_wan_lan {
+  # TODO: tighten this down
+  meta l4proto { icmp, ipv6-icmp } counter accept
 
-    counter drop
-  }
+  counter drop
+}
 
-  chain output {
-    type filter hook output priority filter; policy accept;
+chain output {
+  type filter hook output priority filter; policy accept;
 
-    # stateless rules
-    oif "lo" accept
-    oifname $wan_iface ip6 daddr $transix_endpoints ip6 nexthdr ipv4 accept
+  # stateless rules
+  oif "lo" accept
+  oifname $wan_iface ip6 daddr $transix_endpoints ip6 nexthdr ipv4 accept
 
-    # conntrack
-    ct state { established, related } accept
-    ct state invalid counter drop
+  # conntrack
+  ct state { established, related } accept
+  ct state invalid counter drop
 
-    # zone based stateful rules
-    oifname $zone_wan_ifaces counter jump output_wan
-    oifname $zone_lan_ifaces counter jump output_lan
+  # zone based stateful rules
+  oifname $zone_wan_ifaces counter jump output_wan
+  oifname $zone_lan_ifaces counter jump output_lan
 
-    counter reject
-  }
+  counter reject
+}
 
-  # zone: router -> wan
-  chain output_wan {
-    meta l4proto { icmp, ipv6-icmp } counter accept
+# zone: router -> wan
+chain output_wan {
+  meta l4proto { icmp, ipv6-icmp } counter accept
 
-    tcp sport $self_ephemeral_port_range tcp flags syn / fin,syn,rst,ack counter accept
-    udp sport $self_ephemeral_port_range counter accept
-    ip6 nexthdr udp udp sport 546 udp dport 547 counter accept comment "allow dhcpv6 to server"
+  tcp sport $self_ephemeral_port_range tcp flags syn / fin,syn,rst,ack counter accept
+  udp sport $self_ephemeral_port_range counter accept
+  ip6 nexthdr udp udp sport 546 udp dport 547 counter accept comment "allow dhcpv6 to server"
 
-    counter reject
-  }
+  counter reject
+}
 
-  # zone: router -> lan
-  chain output_lan {
-    meta l4proto { icmp, ipv6-icmp } counter accept
+# zone: router -> lan
+chain output_lan {
+  meta l4proto { icmp, ipv6-icmp } counter accept
 
-    tcp sport $self_ephemeral_port_range tcp flags syn / fin,syn,rst,ack counter accept
-    udp sport $self_ephemeral_port_range counter accept
+  tcp sport $self_ephemeral_port_range tcp flags syn / fin,syn,rst,ack counter accept
+  udp sport $self_ephemeral_port_range counter accept
 
-    counter accept
-    # TODO: reject
-  }
+  counter accept
+  # TODO: reject
 }

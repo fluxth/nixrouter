@@ -1,17 +1,15 @@
-table inet mangle {
-  chain prerouting {
-    type filter hook prerouting priority mangle; policy accept;
+chain prerouting {
+  type filter hook prerouting priority mangle; policy accept;
 
-    iifname $pppoe_iface ct state new ct mark set $pppoe_ct_mark
+  iifname $pppoe_iface ct state new ct mark set $pppoe_ct_mark
 
-    # copy ct mark to fw mark, used for reverse path filtering
-    meta mark set ct mark
-  }
+  # copy ct mark to fw mark, used for reverse path filtering
+  meta mark set ct mark
+}
 
-  chain output {
-    type route hook output priority mangle; policy accept;
+chain output {
+  type route hook output priority mangle; policy accept;
 
-    # copy ct mark to fw mark
-    meta mark set ct mark
-  }
+  # copy ct mark to fw mark
+  meta mark set ct mark
 }
