@@ -1,0 +1,9 @@
+set ipv6_linklocal {
+  type ipv6_addr
+  flags interval, constant
+
+  elements = {
+    fe80::/10, # link local unicast
+    ff02::/16, # link local multicast
+  }
+}

@@ -27,9 +27,12 @@ chain output {
 }
 
 chain upstream_send_ipoe {
-  # TODO: prevent bogon
-  meta nfproto ipv6 accept
-  counter drop
+  meta nfproto != ipv6 counter drop
+
+  ip6 saddr != @ipv6_linklocal ip6 saddr @ipv6_bogons counter drop
+  ip6 daddr != @ipv6_linklocal ip6 daddr @ipv6_bogons counter drop
+
+  accept
 }
 
 chain upstream_send_dslite {
@@ -53,9 +56,12 @@ chain upstream_send_pppoe {
 }
 
 chain upstream_recv_ipoe {
-  # TODO: prevent bogon
-  meta nfproto ipv6 accept
-  counter drop
+  meta nfproto != ipv6 counter drop
+
+  ip6 saddr != @ipv6_linklocal ip6 saddr @ipv6_bogons counter drop
+  ip6 daddr != @ipv6_linklocal ip6 daddr @ipv6_bogons counter drop
+
+  accept
 }
 
 chain upstream_recv_dslite {
