@@ -1,0 +1,70 @@
+table inet raw {
+  chain prerouting {
+    type filter hook prerouting priority raw; policy accept;
+
+    iif "lo" notrack
+    iifname $wan_iface ip6 saddr $transix_endpoints ip6 nexthdr ipv4 notrack
+
+    # upstream filtering inbound
+    iifname $wan_iface jump upstream_recv_ipoe
+    iifname $transix_iface jump upstream_recv_dslite
+    iifname $pppoe_iface jump upstream_recv_pppoe
+  }
+
+  chain postrouting {
+    type filter hook postrouting priority raw; policy accept;
+
+    # upstream filtering outbound
+    oifname $wan_iface jump upstream_send_ipoe
+    oifname $transix_iface jump upstream_send_dslite
+    oifname $pppoe_iface jump upstream_send_pppoe
+  }
+
+  chain output {
+    type filter hook output priority raw; policy accept;
+
+    oif "lo" notrack
+    oifname $wan_iface ip6 daddr $transix_endpoints ip6 nexthdr ipv4 notrack
+
+    # upstream filtering outbound
+    oifname $wan_iface jump upstream_send_ipoe
+    oifname $transix_iface jump upstream_send_dslite
+    oifname $pppoe_iface jump upstream_send_pppoe
+  }
+
+  chain upstream_send_ipoe {
+    # TODO: prevent bogon
+    meta nfproto ipv6 accept
+    counter drop
+  }
+
+  chain upstream_send_dslite {
+    # TODO: prevent bogon but allow src private addresses
+    meta nfproto ipv4 accept
+    counter drop
+  }
+
+  chain upstream_send_pppoe {
+    # TODO: prevent bogon
+    meta nfproto ipv4 accept
+    counter drop
+  }
+
+  chain upstream_recv_ipoe {
+    # TODO: prevent bogon
+    meta nfproto ipv6 accept
+    counter drop
+  }
+
+  chain upstream_recv_dslite {
+    # TODO: prevent bogon but allow dst private addresses
+    meta nfproto ipv4 accept
+    counter drop
+  }
+
+  chain upstream_recv_pppoe {
+    # TODO: prevent bogon
+    meta nfproto ipv4 accept
+    counter drop
+  }
+}
