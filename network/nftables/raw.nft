@@ -24,11 +24,6 @@ chain output {
 
   oif "lo" notrack
   oifname $wan_iface ip6 daddr $transix_endpoints ip6 nexthdr ipv4 notrack
-
-  # upstream filtering outbound
-  oifname $wan_iface jump upstream_send_ipoe
-  oifname $transix_iface jump upstream_send_dslite
-  oifname $pppoe_iface jump upstream_send_pppoe
 }
 
 chain upstream_send_ipoe {
