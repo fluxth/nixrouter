@@ -40,10 +40,10 @@ table inet filter {
   # zone: wan -> router
   chain input_wan {
     # TODO: tighten this down
-    meta l4proto { icmp, ipv6-icmp } counter jump upstream_recv
+    meta l4proto { icmp, ipv6-icmp } counter accept
 
     # TODO: temporary until wireguard, do not allow from ipv4 due to frequent port scans
-    meta nfproto ipv6 tcp dport 22 tcp flags syn / fin,syn,rst,ack counter jump upstream_recv comment "allow ssh"
+    meta nfproto ipv6 tcp dport 22 tcp flags syn / fin,syn,rst,ack counter accept comment "allow ssh"
 
     counter drop
   }
@@ -69,8 +69,8 @@ table inet filter {
     # block transix tunnel from lan as it can be used to bypass firewall
     ip6 daddr $transix_endpoints ip6 nexthdr ipv4 drop
 
-    ip6 saddr $lan_ipv6_prefix counter jump upstream_send
-    ip saddr $lan_ipv4_prefix counter jump upstream_send
+    ip6 saddr $lan_ipv6_prefix counter accept
+    ip saddr $lan_ipv4_prefix counter accept
 
     counter reject
   }
@@ -78,7 +78,7 @@ table inet filter {
   # zone: wan -> lan
   chain forward_wan_lan {
     # TODO: tighten this down
-    meta l4proto { icmp, ipv6-icmp } counter jump upstream_recv
+    meta l4proto { icmp, ipv6-icmp } counter accept
 
     counter drop
   }
@@ -103,11 +103,11 @@ table inet filter {
 
   # zone: router -> wan
   chain output_wan {
-    meta l4proto { icmp, ipv6-icmp } counter jump upstream_send
+    meta l4proto { icmp, ipv6-icmp } counter accept
 
-    tcp sport $self_ephemeral_port_range tcp flags syn / fin,syn,rst,ack counter jump upstream_send
-    udp sport $self_ephemeral_port_range counter jump upstream_send
-    ip6 nexthdr udp udp sport 546 udp dport 547 counter jump upstream_send comment "allow dhcpv6 to server"
+    tcp sport $self_ephemeral_port_range tcp flags syn / fin,syn,rst,ack counter accept
+    udp sport $self_ephemeral_port_range counter accept
+    ip6 nexthdr udp udp sport 546 udp dport 547 counter accept comment "allow dhcpv6 to server"
 
     counter reject
   }
@@ -122,60 +122,6 @@ table inet filter {
     counter accept
     # TODO: reject
   }
-
-  chain upstream_send {
-    oifname $wan_iface jump upstream_send_ipoe
-    oifname $transix_iface jump upstream_send_dslite
-    oifname $pppoe_iface jump upstream_send_pppoe
-
-    counter log prefix "fw-drop-upstream-send: "
-    drop
-  }
-
-  chain upstream_send_ipoe {
-    # TODO: prevent bogon
-    meta nfproto ipv6 accept
-    return
-  }
-
-  chain upstream_send_dslite {
-    # TODO: prevent bogon but allow private addresses
-    meta nfproto ipv4 accept
-    return
-  }
-
-  chain upstream_send_pppoe {
-    # TODO: prevent bogon
-    meta nfproto ipv4 accept
-    return
-  }
-
-  chain upstream_recv {
-    iifname $wan_iface jump upstream_recv_ipoe
-    iifname $transix_iface jump upstream_recv_dslite
-    iifname $pppoe_iface jump upstream_recv_pppoe
-
-    counter log prefix "fw-drop-upstream-recv: "
-    drop
-  }
-
-  chain upstream_recv_ipoe {
-    # TODO: prevent bogon
-    meta nfproto ipv6 accept
-    return
-  }
-
-  chain upstream_recv_dslite {
-    # TODO: prevent bogon but allow private addresses
-    meta nfproto ipv4 accept
-    return
-  }
-
-  chain upstream_recv_pppoe {
-    # TODO: prevent bogon
-    meta nfproto ipv4 accept
-    return
-  }
 }
 
 table inet raw {
@@ -184,6 +130,20 @@ table inet raw {
 
     iif "lo" notrack
     iifname $wan_iface ip6 saddr $transix_endpoints ip6 nexthdr ipv4 notrack
+
+    # upstream filtering inbound
+    iifname $wan_iface jump upstream_recv_ipoe
+    iifname $transix_iface jump upstream_recv_dslite
+    iifname $pppoe_iface jump upstream_recv_pppoe
+  }
+
+  chain postrouting {
+    type filter hook postrouting priority raw; policy accept;
+
+    # upstream filtering outbound
+    oifname $wan_iface jump upstream_send_ipoe
+    oifname $transix_iface jump upstream_send_dslite
+    oifname $pppoe_iface jump upstream_send_pppoe
   }
 
   chain output {
@@ -191,6 +151,47 @@ table inet raw {
 
     oif "lo" notrack
     oifname $wan_iface ip6 daddr $transix_endpoints ip6 nexthdr ipv4 notrack
+
+    # upstream filtering outbound
+    oifname $wan_iface jump upstream_send_ipoe
+    oifname $transix_iface jump upstream_send_dslite
+    oifname $pppoe_iface jump upstream_send_pppoe
+  }
+
+  chain upstream_send_ipoe {
+    # TODO: prevent bogon
+    meta nfproto ipv6 accept
+    counter drop
+  }
+
+  chain upstream_send_dslite {
+    # TODO: prevent bogon but allow src private addresses
+    meta nfproto ipv4 accept
+    counter drop
+  }
+
+  chain upstream_send_pppoe {
+    # TODO: prevent bogon
+    meta nfproto ipv4 accept
+    counter drop
+  }
+
+  chain upstream_recv_ipoe {
+    # TODO: prevent bogon
+    meta nfproto ipv6 accept
+    counter drop
+  }
+
+  chain upstream_recv_dslite {
+    # TODO: prevent bogon but allow dst private addresses
+    meta nfproto ipv4 accept
+    counter drop
+  }
+
+  chain upstream_recv_pppoe {
+    # TODO: prevent bogon
+    meta nfproto ipv4 accept
+    counter drop
   }
 }
 
