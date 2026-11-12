@@ -1,0 +1,25 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    "customManagers:githubActionsVersions",
+    ":maintainLockFilesMonthly",
+    ":pinVersions"
+  ],
+  "reviewers": ["fluxth"],
+  "timezone": "Asia/Tokyo",
+  "schedule": ["before 7am"],
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 0,
+  "packageRules": [
+    {
+      "description": "Auto-merge GitHub Actions patch and digest updates",
+      "matchUpdateTypes": ["patch", "digest"],
+      "matchManagers": ["github-actions"],
+      "schedule": ["before 6am"],
+      "automerge": true,
+      "automergeType": "pr"
+    }
+  ]
+}
