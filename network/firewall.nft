@@ -11,7 +11,7 @@ table inet filter {
     type filter hook input priority filter; policy drop;
 
     # stateless rules
-    iifname "lo" accept
+    iif "lo" accept
     iifname $wan_iface ip6 saddr $transix_endpoints ip6 nexthdr ipv4 accept
 
     # conntrack
@@ -87,7 +87,7 @@ table inet filter {
     type filter hook output priority filter; policy accept;
 
     # stateless rules
-    oifname "lo" accept
+    oif "lo" accept
     oifname $wan_iface ip6 daddr $transix_endpoints ip6 nexthdr ipv4 accept
 
     # conntrack
@@ -182,14 +182,14 @@ table inet raw {
   chain prerouting {
     type filter hook prerouting priority raw; policy accept;
 
-    iifname "lo" notrack
+    iif "lo" notrack
     iifname $wan_iface ip6 saddr $transix_endpoints ip6 nexthdr ipv4 notrack
   }
 
   chain output {
     type filter hook output priority raw; policy accept;
 
-    oifname "lo" notrack
+    oif "lo" notrack
     oifname $wan_iface ip6 daddr $transix_endpoints ip6 nexthdr ipv4 notrack
   }
 }
