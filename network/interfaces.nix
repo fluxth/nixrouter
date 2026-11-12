@@ -32,6 +32,13 @@ in
   systemd.network = {
     enable = true;
 
+    netdevs."100-br-lan" = {
+      netdevConfig = {
+        Name = constants.lanIface;
+        Kind = "bridge";
+      };
+    };
+
     netdevs."100-wan4-dslite" = {
       netdevConfig = {
         Name = constants.transixIface;
@@ -46,90 +53,115 @@ in
       };
     };
 
-    networks."200-wan6" = {
-      matchConfig.Name = constants.wanIface;
-      networkConfig = {
-        IPv6Forwarding = true;
-        IPv6ProxyNDP = true;
+    networks = lib.mkMerge [
+      {
+        "200-wan6" = {
+          matchConfig.Name = constants.wanIface;
+          networkConfig = {
+            IPv6Forwarding = true;
+            IPv6ProxyNDP = true;
 
-        IPv6AcceptRA = true;
-        IPv6LinkLocalAddressGenerationMode = "stable-privacy";
-        IPv6PrivacyExtensions = true;
-        Tunnel = constants.transixIface;
-      };
-      ipv6AcceptRAConfig = {
-        UseOnLinkPrefix = false;
-        Token = "prefixstable";
-      };
-    };
+            IPv6AcceptRA = true;
+            IPv6LinkLocalAddressGenerationMode = "stable-privacy";
+            IPv6PrivacyExtensions = true;
+            Tunnel = constants.transixIface;
+          };
+          ipv6AcceptRAConfig = {
+            UseOnLinkPrefix = false;
+            Token = "prefixstable";
+          };
+        };
+      }
+      {
+        "210-wan4-dslite" = {
+          matchConfig.Name = constants.transixIface;
+          linkConfig.MTUBytes = constants.transixMTU;
+          networkConfig = {
+            IPv4Forwarding = true;
+          };
+          address = [ "192.0.0.2" ];
+          routes = [
+            {
+              Destination = "0.0.0.0/0";
+            }
+          ];
+        };
+      }
+      {
+        "220-wan4-pppoe" = {
+          matchConfig.Name = constants.pppoeIface;
+          linkConfig.MTUBytes = constants.pppoeMTU;
+          linkConfig.RequiredForOnline = false;
+          networkConfig = {
+            IPv4Forwarding = false; # turn this on if want to use as a gateway for lan
 
-    networks."210-wan4-dslite" = {
-      matchConfig.Name = constants.transixIface;
-      linkConfig.MTUBytes = constants.transixMTU;
-      networkConfig = {
-        IPv4Forwarding = true;
-      };
-      address = [ "192.0.0.2" ];
-      routes = [
-        {
-          Destination = "0.0.0.0/0";
-        }
-      ];
-    };
+            KeepConfiguration = true; # otherwise it clears ip that pppd set
+            LinkLocalAddressing = "no";
+            IPv6AcceptRA = false;
+          };
+          # default routes are configured in ppp hooks due to race
+          routingPolicyRules = [
+            {
+              FirewallMark = constants.pppoeFirewallMark;
+              Table = constants.pppoeRouteTable;
+            }
+          ];
+        };
+      }
+      {
+        "300-br-lan" = {
+          matchConfig.Name = constants.lanIface;
+          networkConfig = {
+            IPv6Forwarding = true;
+            IPv4Forwarding = true;
+            IPv6ProxyNDP = true;
 
-    networks."220-wan4-pppoe" = {
-      matchConfig.Name = constants.pppoeIface;
-      linkConfig.MTUBytes = constants.pppoeMTU;
-      linkConfig.RequiredForOnline = false;
-      networkConfig = {
-        IPv4Forwarding = false; # turn this on if want to use as a gateway for lan
+            IPv6SendRA = true;
+            IPv6AcceptRA = false;
+            DHCPServer = true;
 
-        KeepConfiguration = true; # otherwise it clears ip that pppd set
-        LinkLocalAddressing = "no";
-        IPv6AcceptRA = false;
-      };
-      # default routes are configured in ppp hooks due to race
-      routingPolicyRules = [
-        {
-          FirewallMark = constants.pppoeFirewallMark;
-          Table = constants.pppoeRouteTable;
-        }
-      ];
-    };
-
-    networks."300-lan" = {
-      matchConfig.Name = constants.lanIface;
-      networkConfig = {
-        IPv6Forwarding = true;
-        IPv4Forwarding = true;
-        IPv6ProxyNDP = true;
-
-        IPv6SendRA = true;
-        IPv6AcceptRA = false;
-        DHCPServer = true;
-      };
-      address = [
-        constants.lanIpv6HostPrefix
-        constants.lanIpv4HostPrefix
-      ];
-      dhcpServerConfig = {
-        EmitRouter = true;
-        EmitDNS = true;
-        PoolOffset = 0;
-        PoolSize = 200;
-        DNS = [ constants.lanIpv4Host ];
-      };
-      ipv6SendRAConfig = {
-        DNS = [ constants.lanIpv6Host ];
-      };
-      ipv6Prefixes = [
-        {
-          Prefix = constants.wanIpv6Prefix;
-          OnLink = true;
-          AddressAutoconfiguration = true;
-        }
-      ];
-    };
+            ConfigureWithoutCarrier = true;
+          };
+          address = [
+            constants.lanIpv6HostPrefix
+            constants.lanIpv4HostPrefix
+          ];
+          dhcpServerConfig = {
+            EmitRouter = true;
+            EmitDNS = true;
+            PoolOffset = 0;
+            PoolSize = 200;
+            DNS = [ constants.lanIpv4Host ];
+          };
+          ipv6SendRAConfig = {
+            DNS = [ constants.lanIpv6Host ];
+          };
+          ipv6Prefixes = [
+            {
+              Prefix = constants.wanIpv6Prefix;
+              OnLink = true;
+              AddressAutoconfiguration = true;
+            }
+          ];
+        };
+      }
+      # configure lan bridge slave interfaces
+      (builtins.listToAttrs (
+        map (
+          item:
+          lib.nameValuePair item.configName {
+            matchConfig.Name = item.ifaceName;
+            networkConfig = {
+              Bridge = constants.lanIface;
+              ConfigureWithoutCarrier = true;
+            };
+            linkConfig = {
+              RequiredForOnline = "no";
+            };
+          }
+        ) constants.lanIfaceSlaves
+      ))
+    ];
   };
 
   services.pppd = {
