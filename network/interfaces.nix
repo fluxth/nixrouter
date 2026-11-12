@@ -124,6 +124,7 @@ in
           };
           address = [
             constants.lanIpv6HostPrefix
+            constants.lanIpv6UlaHostPrefix
             constants.lanIpv4HostPrefix
           ];
           dhcpServerConfig = {
@@ -134,12 +135,20 @@ in
             DNS = [ constants.lanIpv4Host ];
           };
           ipv6SendRAConfig = {
-            DNS = [ constants.lanIpv6Host ];
+            DNS = [
+              constants.lanIpv6Host
+              constants.lanIpv6UlaHost
+            ];
           };
           ipv6Prefixes = [
             {
               Prefix = constants.wanIpv6Prefix;
               OnLink = false; # proxied NDP
+              AddressAutoconfiguration = true;
+            }
+            {
+              Prefix = constants.lanIpv6UlaPrefix;
+              OnLink = true;
               AddressAutoconfiguration = true;
             }
           ];

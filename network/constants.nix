@@ -20,8 +20,11 @@ rec {
   lanIpv6Prefix = wanIpv6Prefix; # proxy NDP from wan
   lanIpv6Host = "${upstreamDelegatedPrefix}::1";
   lanIpv6HostPrefix = "${lanIpv6Host}/${upstreamDelegatedPrefixSize}";
-  lanIpv4Prefix = "172.24.100.0/24";
-  lanIpv4Host = "172.24.100.254";
+  lanIpv6UlaPrefix = "fd42:80c2:5fd6:1::/64";
+  lanIpv6UlaHost = "fd42:80c2:5fd6:1::1";
+  lanIpv6UlaHostPrefix = "${lanIpv6UlaHost}/64";
+  lanIpv4Prefix = "172.24.1.0/24";
+  lanIpv4Host = "172.24.1.254";
   lanIpv4HostPrefix = "${lanIpv4Host}/24";
   lanIfaceSlaves = [
     {
