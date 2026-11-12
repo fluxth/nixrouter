@@ -1,0 +1,46 @@
+name: Auto update bogon list
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run at :30 every 4 hours
+    # https://www.team-cymru.com/bogon-reference-http
+    - cron: "30 */4 * * *"
+
+jobs:
+  update:
+    name: Update bogon list
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15.2"
+
+      - name: Update bogon list
+        run: |
+          python3 scripts/update_bogons.py
+
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          committer: flux-ci[bot] <283426290+flux-ci[bot]@users.noreply.github.com>
+          author: flux-ci[bot] <283426290+flux-ci[bot]@users.noreply.github.com>
+          commit-message: "update ip bogon list"
+          title: "update ip bogon list"
+          body: "Update IP bogon list to latest"
+          branch: auto/update-bogons
+          reviewers: fluxth
