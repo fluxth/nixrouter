@@ -139,7 +139,7 @@ in
           ipv6Prefixes = [
             {
               Prefix = constants.wanIpv6Prefix;
-              OnLink = true;
+              OnLink = false; # proxied NDP
               AddressAutoconfiguration = true;
             }
           ];
