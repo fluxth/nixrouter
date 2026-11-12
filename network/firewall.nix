@@ -45,6 +45,8 @@ in
       }
 
       table inet raw {
+        include "${builtins.toFile "prefixes-ipv4-bogons.nft" (builtins.readFile ./nftables/prefixes/ipv4_bogons.nft)}"
+        include "${builtins.toFile "prefixes-ipv4-private.nft" (builtins.readFile ./nftables/prefixes/ipv4_private.nft)}"
         include "${builtins.toFile "firewall-raw.nft" (builtins.readFile ./nftables/raw.nft)}"
       }
 
