@@ -3,9 +3,9 @@ name: Auto update bogon list
 on:
   workflow_dispatch:
   schedule:
-    # Run at :30 every 4 hours
+    # Run at :42 every hour
     # https://www.team-cymru.com/bogon-reference-http
-    - cron: "30 */4 * * *"
+    - cron: "42 * * * *"
 
 jobs:
   update:
