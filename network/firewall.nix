@@ -19,6 +19,10 @@ in
   networking.nftables = {
     enable = true;
 
+    # HACK: when checking rules at build time, interfaces don't exist
+    # https://discourse.nixos.org/t/nftables-could-not-process-rule-no-such-file-or-directory/33031
+    preCheckRuleset = "sed 's/devices = {.*}/devices = { lo }/' -i ruleset.conf";
+
     flushRuleset = true; # replace, not add
     ruleset = ''
       define wan_iface = "${constants.wanIface}"
@@ -41,6 +45,12 @@ in
       # firewall rules are in external files in network/nftables directory
 
       table inet filter {
+        # flowtable needs to be here for the preCheckRuleset hack above to work
+        flowtable fastpath {
+          hook ingress priority filter
+          devices = ${constants.fastpathIfaces}
+        }
+
         include "${builtins.toFile "firewall-filter.nft" (builtins.readFile ./nftables/filter.nft)}"
       }
 

@@ -69,6 +69,8 @@ rec {
     }
   ];
 
+  fastpathIfaces = "{ enp4s0, enp5s0, enp6s0, enp7s0, enp8s0, eno1, eno2, eno3, eno4 }"; # nft set, for firewall
+
   selfEphemeralPortStart = "32768";
   selfEphemeralPortEnd = "60999";
 }

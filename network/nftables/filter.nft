@@ -45,8 +45,17 @@ chain input_wan {
   counter drop
 }
 
+chain fastpath {
+  tcp dport 443 flow add @fastpath counter
+  udp dport 443 flow add @fastpath counter
+  return
+}
+
 chain forward {
   type filter hook forward priority filter; policy drop;
+
+  # offload some established connections
+  ct state established jump fastpath
 
   # conntrack
   ct state { established, related } accept
