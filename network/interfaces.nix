@@ -99,6 +99,9 @@ in
             LinkLocalAddressing = "no";
             IPv6AcceptRA = false;
           };
+          linkConfig = {
+            Multicast = false; # it is basically an ipv4-only point to point link here, do not do this if it has ipv6
+          };
           # default routes are configured in ppp hooks due to race
           routingPolicyRules = [
             {
