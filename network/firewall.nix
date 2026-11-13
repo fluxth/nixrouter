@@ -7,7 +7,6 @@
 
 let
   constants = import ./constants.nix;
-  firewallRuleset = builtins.readFile ./firewall.nft;
 in
 {
   # keep kernel config in sync with the firewall
