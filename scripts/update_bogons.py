@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 
+import os
 import asyncio
 import urllib.request
 import ipaddress
 from pathlib import Path
+import tempfile
+import shutil
+from ipaddress import ip_network
 
 from typing import Iterator
 
@@ -18,6 +22,9 @@ def fetch_bogon_list(url: str) -> Iterator[str]:
 
             if line[0] == "#":
                 continue
+
+            # verify it actually is a prefix, raises ValueError if not
+            ip_network(line)
 
             yield line
 
@@ -40,15 +47,22 @@ FOOTER = """\
 def process_bogon_file(url: str, dest: Path, set_name: str, set_type: str) -> int:
     count = 0
 
-    with open(dest, "w") as f:
-        f.write(HEADER.format(set_name=set_name, set_type=set_type))
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as tmp:
+        tmp.write(HEADER.format(set_name=set_name, set_type=set_type))
 
         for ip in fetch_bogon_list(url):
-            f.write(f"    {ip},\n")
+            tmp.write(f"    {ip},\n")
             count += 1
 
-        f.write(FOOTER)
-        f.write(f"# prefix count: {count}\n")
+        tmp.write(FOOTER)
+        tmp.write(f"# prefix count: {count}\n")
+
+        tmp.flush()
+
+        if count > 0:
+            shutil.copyfile(tmp.name, dest)
+        else:
+            raise RuntimeError(f"fatal: got 0 prefixes from {set_name}")
 
     return count
 
