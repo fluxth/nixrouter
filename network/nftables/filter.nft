@@ -19,6 +19,8 @@ chain input {
   # zone based stateful rules
   iifname $zone_lan_ifaces counter jump input_lan
   iifname $zone_wan_ifaces counter jump input_wan
+  iifname $zone_wg0_ifaces counter jump input_wg0
+  iifname $zone_wg1_ifaces counter jump input_wg1
 
   counter reject
 }
@@ -32,6 +34,9 @@ chain input_lan {
 
   tcp dport 22 tcp flags syn / fin,syn,rst,ack accept comment "allow ssh"
 
+  udp dport 55240 accept comment "allow wireguard wg0"
+  udp dport 55241 accept comment "allow wireguard wg1"
+
   counter reject
 }
 
@@ -43,7 +48,30 @@ chain input_wan {
   # TODO: temporary until wireguard, do not allow from ipv4 due to frequent port scans
   meta nfproto ipv6 tcp dport 22 tcp flags syn / fin,syn,rst,ack counter accept comment "allow ssh"
 
+  udp dport 55240 accept comment "allow wireguard wg0"
+  udp dport 55241 accept comment "allow wireguard wg1"
+
   counter drop
+}
+
+# zone: wg0 -> router
+chain input_wg0 {
+  meta l4proto { icmp, ipv6-icmp } counter accept
+
+  udp dport 53 accept comment "allow dns"
+  tcp dport 22 tcp flags syn / fin,syn,rst,ack accept comment "allow ssh"
+
+  counter reject
+}
+
+# zone: wg1 -> router
+chain input_wg1 {
+  meta l4proto { icmp, ipv6-icmp } counter accept
+
+  udp dport 53 accept comment "allow dns"
+  tcp dport 22 tcp flags syn / fin,syn,rst,ack accept comment "allow ssh"
+
+  counter reject
 }
 
 chain fastpath {
@@ -63,8 +91,26 @@ chain forward {
   ct state invalid counter drop
 
   # zone based stateful rules
+  # from lan
   iifname $zone_lan_ifaces oifname $zone_wan_ifaces counter jump forward_lan_wan
+  iifname $zone_lan_ifaces oifname $zone_wg0_ifaces counter jump forward_lan_wg0
+  iifname $zone_lan_ifaces oifname $zone_wg1_ifaces counter jump forward_lan_wg1
+  iifname $zone_lan_ifaces oifname $zone_lan_ifaces counter accept # allow intra zone
+  # from wan
   iifname $zone_wan_ifaces oifname $zone_lan_ifaces counter jump forward_wan_lan
+  iifname $zone_wan_ifaces oifname $zone_wg0_ifaces counter jump forward_wan_wg0
+  iifname $zone_wan_ifaces oifname $zone_wg1_ifaces counter jump forward_wan_wg1
+  iifname $zone_wan_ifaces oifname $zone_wan_ifaces counter drop # disallow intra zone
+  # from wg0
+  iifname $zone_wg0_ifaces oifname $zone_lan_ifaces counter jump forward_wg0_lan
+  iifname $zone_wg0_ifaces oifname $zone_wan_ifaces counter jump forward_wg0_wan
+  iifname $zone_wg0_ifaces oifname $zone_wg1_ifaces counter jump forward_wg0_wg1
+  iifname $zone_wg0_ifaces oifname $zone_wg0_ifaces counter reject # disallow intra zone
+  # from wg1
+  iifname $zone_wg1_ifaces oifname $zone_lan_ifaces counter jump forward_wg1_lan
+  iifname $zone_wg1_ifaces oifname $zone_wan_ifaces counter jump forward_wg1_wan
+  iifname $zone_wg1_ifaces oifname $zone_wg0_ifaces counter jump forward_wg1_wg0
+  iifname $zone_wg1_ifaces oifname $zone_wg1_ifaces counter reject # disallow intra zone
 
   counter reject
 }
@@ -76,8 +122,23 @@ chain forward_lan_wan {
   # block transix tunnel from lan as it can be used to bypass firewall
   ip6 daddr $transix_endpoints ip6 nexthdr ipv4 drop
 
-  ip6 saddr $lan_ipv6_prefix counter accept
-  ip saddr $lan_ipv4_prefix counter accept
+  # rely on strict rpf for filtering source address
+  meta nfproto ipv6 counter accept
+  meta nfproto ipv4 counter accept
+
+  counter reject
+}
+
+# zone: lan -> wg0
+chain forward_lan_wg0 {
+  meta l4proto { icmp, ipv6-icmp } counter accept
+
+  counter reject
+}
+
+# zone: lan -> wg1
+chain forward_lan_wg1 {
+  meta l4proto { icmp, ipv6-icmp } counter accept
 
   counter reject
 }
@@ -88,6 +149,78 @@ chain forward_wan_lan {
   meta l4proto { icmp, ipv6-icmp } counter accept
 
   counter drop
+}
+
+# zone: wan -> wg0
+chain forward_wan_wg0 {
+  # TODO: tighten this down
+  meta l4proto { icmp, ipv6-icmp } counter accept
+
+  counter drop
+}
+
+# zone: wan -> wg1
+chain forward_wan_wg1 {
+  # TODO: tighten this down
+  meta l4proto { icmp, ipv6-icmp } counter accept
+
+  counter drop
+}
+
+# zone: wg0 -> lan
+chain forward_wg0_lan {
+  meta l4proto { icmp, ipv6-icmp } counter accept
+
+  # TODO: only allow what's needed
+  # rely on strict rpf for filtering source address
+  meta nfproto ipv6 counter accept
+  meta nfproto ipv4 counter accept
+
+  counter reject
+}
+
+# zone: wg0 -> wan
+chain forward_wg0_wan {
+  counter drop
+}
+
+# zone: wg0 -> wg1
+chain forward_wg0_wg1 {
+  meta l4proto { icmp, ipv6-icmp } counter accept
+
+  counter reject
+}
+
+# zone: wg1 -> lan
+chain forward_wg1_lan {
+  meta l4proto { icmp, ipv6-icmp } counter accept
+
+  # rely on strict rpf for filtering source address
+  meta nfproto ipv6 counter accept
+  meta nfproto ipv4 counter accept
+
+  counter reject
+}
+
+# zone: wg1 -> wan
+chain forward_wg1_wan {
+  tcp flags syn tcp option maxseg size set rt mtu counter comment "tcp mss clamping"
+
+  # block transix tunnel from lan as it can be used to bypass firewall
+  ip6 daddr $transix_endpoints ip6 nexthdr ipv4 drop
+
+  # rely on strict rpf for filtering source address
+  meta nfproto ipv6 counter accept
+  meta nfproto ipv4 counter accept
+
+  counter reject
+}
+
+# zone: wg1 -> wg0
+chain forward_wg1_wg0 {
+  meta l4proto { icmp, ipv6-icmp } counter accept
+
+  counter reject
 }
 
 chain output {
@@ -104,6 +237,8 @@ chain output {
   # zone based stateful rules
   oifname $zone_wan_ifaces counter jump output_wan
   oifname $zone_lan_ifaces counter jump output_lan
+  oifname $zone_wg0_ifaces counter jump output_wg0
+  oifname $zone_wg1_ifaces counter jump output_wg1
 
   counter reject
 }
@@ -126,6 +261,25 @@ chain output_lan {
   tcp sport $self_ephemeral_port_range tcp flags syn / fin,syn,rst,ack counter accept
   udp sport $self_ephemeral_port_range counter accept
 
-  counter accept
-  # TODO: reject
+  counter reject
+}
+
+# zone: router -> wg0
+chain output_wg0 {
+  meta l4proto { icmp, ipv6-icmp } counter accept
+
+  tcp sport $self_ephemeral_port_range tcp flags syn / fin,syn,rst,ack counter accept
+  udp sport $self_ephemeral_port_range counter accept
+
+  counter reject
+}
+
+# zone: router -> wg1
+chain output_wg1 {
+  meta l4proto { icmp, ipv6-icmp } counter accept
+
+  tcp sport $self_ephemeral_port_range tcp flags syn / fin,syn,rst,ack counter accept
+  udp sport $self_ephemeral_port_range counter accept
+
+  counter reject
 }

@@ -173,6 +173,27 @@ in
           }
         ) constants.lanIfaceSlaves
       ))
+      {
+        "400-wg0" = {
+          matchConfig.Name = constants.wg0Iface;
+          linkConfig.MTUBytes = 1300;
+          address = [
+            constants.wg0Ipv6UlaHostPrefix
+            constants.wg0Ipv4HostPrefix
+          ];
+        };
+      }
+      {
+        "401-wg1" = {
+          matchConfig.Name = constants.wg1Iface;
+          linkConfig.MTUBytes = 1394;
+          address = [
+            constants.wg1Ipv6HostPrefix
+            constants.wg1Ipv6UlaHostPrefix
+            constants.wg1Ipv4HostPrefix
+          ];
+        };
+      }
     ];
   };
 }

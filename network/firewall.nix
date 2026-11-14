@@ -30,14 +30,16 @@ in
       define transix_endpoints = ${constants.transixEndpointSet}
 
       define lan_iface = "${constants.lanIface}"
-      define lan_ipv6_prefix = ${constants.lanIpv6Prefix}
-      define lan_ipv4_prefix = ${constants.lanIpv4Prefix}
 
       define pppoe_iface = "${constants.pppoeIface}"
       define pppoe_ct_mark = ${constants.pppoeConntrackMark}
 
+      define wg1_ipv6_prefix = ${constants.wg1Ipv6Prefix}
+
       define zone_wan_ifaces = { $wan_iface, $transix_iface, $pppoe_iface }
       define zone_lan_ifaces = { $lan_iface }
+      define zone_wg0_ifaces = "${constants.wg0Iface}"
+      define zone_wg1_ifaces = "${constants.wg1Iface}"
 
       define self_ephemeral_port_range = ${constants.selfEphemeralPortStart}-${constants.selfEphemeralPortEnd}
 
@@ -64,6 +66,10 @@ in
 
       table inet mangle {
         include "${builtins.toFile "firewall-mangle.nft" (builtins.readFile ./nftables/mangle.nft)}"
+      }
+
+      table inet srcnat {
+        include "${builtins.toFile "firewall-srcnat.nft" (builtins.readFile ./nftables/srcnat.nft)}"
       }
     '';
   };

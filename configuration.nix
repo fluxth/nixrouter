@@ -6,6 +6,13 @@
   ...
 }:
 
+let
+  sopsNetworkdOwner = {
+    owner = "root";
+    group = "systemd-network";
+    mode = "0440";
+  };
+in
 {
   nix.settings.experimental-features = [
     "nix-command"
@@ -17,6 +24,7 @@
     ./network/interfaces.nix
     ./network/firewall.nix
     ./network/pppoe.nix
+    ./network/wireguard.nix
     ./services/openssh.nix
     ./services/dnsproxy.nix
     ./services/ndppd.nix
@@ -32,6 +40,17 @@
     secrets."pppoe_credentials/bbexcite" = { };
     secrets."ddns/aws_credentials" = { };
     secrets."ddns/envfile" = { };
+    secrets."wireguard/wg0/private_key" = sopsNetworkdOwner;
+    secrets."wireguard/wg0/peer2/preshared_key" = sopsNetworkdOwner;
+    secrets."wireguard/wg0/peer3/preshared_key" = sopsNetworkdOwner;
+    secrets."wireguard/wg0/peer4/preshared_key" = sopsNetworkdOwner;
+    secrets."wireguard/wg0/peer5/preshared_key" = sopsNetworkdOwner;
+    secrets."wireguard/wg0/peer6/preshared_key" = sopsNetworkdOwner;
+    secrets."wireguard/wg1/private_key" = sopsNetworkdOwner;
+    secrets."wireguard/wg1/peer2/preshared_key" = sopsNetworkdOwner;
+    secrets."wireguard/wg1/peer3/preshared_key" = sopsNetworkdOwner;
+    secrets."wireguard/wg1/peer5/preshared_key" = sopsNetworkdOwner;
+    secrets."wireguard/wg1/peer6/preshared_key" = sopsNetworkdOwner;
   };
 
   boot.kernelPackages = pkgs.linuxPackages_latest;
@@ -67,6 +86,7 @@
       vim
       tcpdump
       conntrack-tools
+      wireguard-tools
     ];
   };
 

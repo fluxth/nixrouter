@@ -1,0 +1,6 @@
+chain srcnat {
+  type nat hook postrouting priority srcnat; policy accept;
+
+  # I know this is cursed, but I only get one /64 from upstream and it's not even a routed block
+  oifname $wan_iface ip6 saddr $wg1_ipv6_prefix counter masquerade
+}
