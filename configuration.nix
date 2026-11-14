@@ -16,6 +16,7 @@
     ./serial.nix
     ./network/interfaces.nix
     ./network/firewall.nix
+    ./network/pppoe.nix
     ./services/openssh.nix
     ./services/dnsproxy.nix
     ./services/ndppd.nix
