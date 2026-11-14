@@ -28,6 +28,9 @@
         "chacha20-poly1305@openssh.com"
         "aes256-gcm@openssh.com"
       ];
+
+      ClientAliveInterval = 60;
+      ClientAliveCountMax = 2;
     };
 
     # unfortunately these don't exist in nix mapping yet
