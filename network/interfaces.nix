@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  ddns,
   sops-nix,
   ...
 }:
@@ -218,6 +219,7 @@ in
 
         ${pkgs.iproute2}/bin/ip route add default dev ${constants.pppoeIface} table ${constants.pppoeRouteTable}
         ${pkgs.systemd}/bin/networkctl reconfigure ${constants.pppoeIface}
+        ${ddns}/bin/ddns "$4" &
       fi
     '';
   };

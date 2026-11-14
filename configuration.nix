@@ -19,6 +19,7 @@
     ./services/openssh.nix
     ./services/dnsproxy.nix
     ./services/ndppd.nix
+    ./services/ddns.nix
   ];
 
   sops = {
@@ -28,6 +29,8 @@
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
 
     secrets."pppoe_credentials/bbexcite" = { };
+    secrets."ddns/aws_credentials" = { };
+    secrets."ddns/envfile" = { };
   };
 
   boot.kernelPackages = pkgs.linuxPackages_latest;
