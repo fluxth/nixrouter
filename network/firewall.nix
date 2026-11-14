@@ -38,6 +38,7 @@ in
 
       define zone_wan_ifaces = { $wan_iface, $transix_iface, $pppoe_iface }
       define zone_lan_ifaces = { $lan_iface }
+      define zone_wg1_ifaces = { "wg1" }
 
       define self_ephemeral_port_range = ${constants.selfEphemeralPortStart}-${constants.selfEphemeralPortEnd}
 
@@ -64,6 +65,10 @@ in
 
       table inet mangle {
         include "${builtins.toFile "firewall-mangle.nft" (builtins.readFile ./nftables/mangle.nft)}"
+      }
+
+      table inet srcnat {
+        include "${builtins.toFile "firewall-srcnat.nft" (builtins.readFile ./nftables/srcnat.nft)}"
       }
     '';
   };

@@ -1,0 +1,5 @@
+chain srcnat {
+  type nat hook postrouting priority srcnat; policy accept;
+
+  oifname $wan_iface ip6 saddr 2409:10:720:c2f0::/60 counter masquerade
+}

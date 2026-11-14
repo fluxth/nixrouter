@@ -172,6 +172,17 @@ in
           }
         ) constants.lanIfaceSlaves
       ))
+      {
+        "400-wg1" = {
+          matchConfig.Name = "wg1";
+          linkConfig.MTUBytes = 1394;
+          address = [
+            "2409:10:720:c2f1::1/128"
+            "fd42:80c2:5fd6:f1::1/128"
+            "172.25.1.1/32"
+          ];
+        };
+      }
     ];
   };
 }
