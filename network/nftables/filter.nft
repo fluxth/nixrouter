@@ -45,9 +45,6 @@ chain input_wan {
   # TODO: tighten this down
   meta l4proto { icmp, ipv6-icmp } counter accept
 
-  # TODO: temporary until wireguard, do not allow from ipv4 due to frequent port scans
-  meta nfproto ipv6 tcp dport 22 tcp flags syn / fin,syn,rst,ack counter accept comment "allow ssh"
-
   udp dport 55240 accept comment "allow wireguard wg0"
   udp dport 55241 accept comment "allow wireguard wg1"
 
