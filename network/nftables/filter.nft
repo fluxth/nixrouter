@@ -49,6 +49,8 @@ chain input_wan {
   icmpv6 type . icmpv6 code { packet-too-big . 0, parameter-problem . 0, nd-neighbor-solicit . 0, nd-neighbor-advert . 0, parameter-problem . 1 } counter accept
   meta l4proto { icmp, ipv6-icmp } counter drop # count the rest
 
+  ip6 saddr fe80::/10 ip6 daddr fe80::/10 udp sport 547 udp dport 546 counter accept comment "allow dhcpv6 from server"
+
   udp dport 55240 accept comment "allow wireguard wg0"
   udp dport 55241 accept comment "allow wireguard wg1"
 
@@ -260,7 +262,8 @@ chain output_wan {
 
   tcp sport $self_ephemeral_port_range tcp flags syn / fin,syn,rst,ack counter accept
   udp sport $self_ephemeral_port_range counter accept
-  ip6 nexthdr udp udp sport 546 udp dport 547 counter accept comment "allow dhcpv6 to server"
+
+  ip6 saddr fe80::/10 udp sport 546 udp dport 547 counter accept comment "allow dhcpv6 to server"
 
   counter reject
 }
