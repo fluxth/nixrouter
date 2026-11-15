@@ -1,8 +1,9 @@
 chain prerouting {
   type filter hook prerouting priority filter; policy accept;
 
+  # NOTE: rpf needs to be after fw marking in mangle, otherwise policy based routing breaks
   fib saddr . mark . iif oif eq 0 counter drop comment "strict reverse path filter"
-};
+}
 
 chain input {
   type filter hook input priority filter; policy drop;
