@@ -29,6 +29,8 @@ chain output {
 chain upstream_send_ipoe {
   meta nfproto != ipv6 counter drop
 
+  ip6 saddr :: icmpv6 type nd-neighbor-solicit counter accept comment "allow dad probes"
+
   ip6 saddr != @ipv6_linklocal ip6 saddr @ipv6_bogons counter drop
   ip6 daddr != @ipv6_linklocal ip6 daddr @ipv6_bogons counter drop
 
@@ -57,6 +59,8 @@ chain upstream_send_pppoe {
 
 chain upstream_recv_ipoe {
   meta nfproto != ipv6 counter drop
+
+  ip6 saddr :: icmpv6 type nd-neighbor-solicit counter accept comment "allow dad probes"
 
   ip6 saddr != @ipv6_linklocal ip6 saddr @ipv6_bogons counter drop
   ip6 daddr != @ipv6_linklocal ip6 daddr @ipv6_bogons counter drop
