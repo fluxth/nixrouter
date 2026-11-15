@@ -52,24 +52,24 @@ in
           devices = ${constants.fastpathIfaces}
         }
 
-        include "${builtins.toFile "firewall-filter.nft" (builtins.readFile ./nftables/filter.nft)}"
+        include "${./nftables/filter.nft}"
       }
 
       table inet raw {
-        include "${builtins.toFile "prefixes-ipv4-bogons.nft" (builtins.readFile ./nftables/prefixes/ipv4_bogons.nft)}"
-        include "${builtins.toFile "prefixes-ipv4-private.nft" (builtins.readFile ./nftables/prefixes/ipv4_private.nft)}"
-        include "${builtins.toFile "prefixes-ipv6-bogons.nft" (builtins.readFile ./nftables/prefixes/ipv6_bogons.nft)}"
-        include "${builtins.toFile "prefixes-ipv6-linklocal.nft" (builtins.readFile ./nftables/prefixes/ipv6_linklocal.nft)}"
+        include "${./nftables/prefixes/ipv4_bogons.nft}"
+        include "${./nftables/prefixes/ipv4_private.nft}"
+        include "${./nftables/prefixes/ipv6_bogons.nft}"
+        include "${./nftables/prefixes/ipv6_linklocal.nft}"
 
-        include "${builtins.toFile "firewall-raw.nft" (builtins.readFile ./nftables/raw.nft)}"
+        include "${./nftables/raw.nft}"
       }
 
       table inet mangle {
-        include "${builtins.toFile "firewall-mangle.nft" (builtins.readFile ./nftables/mangle.nft)}"
+        include "${./nftables/mangle.nft}"
       }
 
       table inet srcnat {
-        include "${builtins.toFile "firewall-srcnat.nft" (builtins.readFile ./nftables/srcnat.nft)}"
+        include "${./nftables/srcnat.nft}"
       }
     '';
   };
