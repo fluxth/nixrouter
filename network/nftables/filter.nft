@@ -29,7 +29,9 @@ chain input {
 chain input_lan {
   meta l4proto { icmp, ipv6-icmp } counter accept
 
-  udp dport 53 accept comment "allow dns"
+  udp dport 53 accept comment "allow dns over udp"
+  tcp dport 53 tcp flags syn / fin,syn,rst,ack accept comment "allow dns over tcp"
+
   udp sport 68 udp dport 67 accept comment "allow dhcp"
 
   tcp dport 22 tcp flags syn / fin,syn,rst,ack accept comment "allow ssh"
@@ -57,7 +59,9 @@ chain input_wan {
 chain input_wg0 {
   meta l4proto { icmp, ipv6-icmp } counter accept
 
-  udp dport 53 accept comment "allow dns"
+  udp dport 53 accept comment "allow dns over udp"
+  tcp dport 53 tcp flags syn / fin,syn,rst,ack accept comment "allow dns over tcp"
+
   tcp dport 22 tcp flags syn / fin,syn,rst,ack accept comment "allow ssh"
 
   counter reject
@@ -67,7 +71,9 @@ chain input_wg0 {
 chain input_wg1 {
   meta l4proto { icmp, ipv6-icmp } counter accept
 
-  udp dport 53 accept comment "allow dns"
+  udp dport 53 accept comment "allow dns over udp"
+  tcp dport 53 tcp flags syn / fin,syn,rst,ack accept comment "allow dns over tcp"
+
   tcp dport 22 tcp flags syn / fin,syn,rst,ack accept comment "allow ssh"
 
   counter reject
