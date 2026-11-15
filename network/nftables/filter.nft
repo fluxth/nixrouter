@@ -82,8 +82,8 @@ chain input_wg1 {
 }
 
 chain fastpath {
-  tcp dport 443 flow add @fastpath counter
-  udp dport 443 flow add @fastpath counter
+  meta l4proto tcp flow add @fastpath counter
+  meta l4proto udp flow add @fastpath counter
   return
 }
 
