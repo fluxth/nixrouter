@@ -42,8 +42,10 @@ chain input_lan {
 
 # zone: wan -> router
 chain input_wan {
-  # TODO: tighten this down
-  meta l4proto { icmp, ipv6-icmp } counter accept
+  icmp type echo-request counter accept
+  icmpv6 type { destination-unreachable, time-exceeded, echo-request, echo-reply, nd-router-solicit, nd-router-advert } counter accept
+  icmpv6 type . icmpv6 code { packet-too-big . 0, parameter-problem . 0, nd-neighbor-solicit . 0, nd-neighbor-advert . 0, parameter-problem . 1 } counter accept
+  meta l4proto { icmp, ipv6-icmp } counter drop # count the rest
 
   udp dport 55240 accept comment "allow wireguard wg0"
   udp dport 55241 accept comment "allow wireguard wg1"
@@ -142,24 +144,30 @@ chain forward_lan_wg1 {
 
 # zone: wan -> lan
 chain forward_wan_lan {
-  # TODO: tighten this down
-  meta l4proto { icmp, ipv6-icmp } counter accept
+  icmp type echo-request counter accept
+  icmpv6 type { destination-unreachable, time-exceeded, echo-request, echo-reply } counter accept
+  icmpv6 type . icmpv6 code { packet-too-big . 0, parameter-problem . 0, parameter-problem . 1 } counter accept
+  meta l4proto { icmp, ipv6-icmp } counter drop # count the rest
 
   counter drop
 }
 
 # zone: wan -> wg0
 chain forward_wan_wg0 {
-  # TODO: tighten this down
-  meta l4proto { icmp, ipv6-icmp } counter accept
+  icmp type echo-request counter accept
+  icmpv6 type { destination-unreachable, time-exceeded, echo-request, echo-reply } counter accept
+  icmpv6 type . icmpv6 code { packet-too-big . 0, parameter-problem . 0, parameter-problem . 1 } counter accept
+  meta l4proto { icmp, ipv6-icmp } counter drop # count the rest
 
   counter drop
 }
 
 # zone: wan -> wg1
 chain forward_wan_wg1 {
-  # TODO: tighten this down
-  meta l4proto { icmp, ipv6-icmp } counter accept
+  icmp type echo-request counter accept
+  icmpv6 type { destination-unreachable, time-exceeded, echo-request, echo-reply } counter accept
+  icmpv6 type . icmpv6 code { packet-too-big . 0, parameter-problem . 0, parameter-problem . 1 } counter accept
+  meta l4proto { icmp, ipv6-icmp } counter drop # count the rest
 
   counter drop
 }
