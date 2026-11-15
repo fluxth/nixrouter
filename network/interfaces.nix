@@ -76,6 +76,7 @@ in
           linkConfig.MTUBytes = constants.transixMTU;
           networkConfig = {
             IPv4Forwarding = true;
+            LinkLocalAddressing = false;
           };
           address = [ "192.0.0.2" ];
           routes = [
