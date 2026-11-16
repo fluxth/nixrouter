@@ -1,0 +1,75 @@
+chain input {
+  type filter hook input priority filter; policy drop;
+
+  # stateless rules
+  iif "lo" accept
+  iifname $wan_iface ip6 saddr $transix_endpoints ip6 nexthdr ipv4 accept
+
+  # conntrack
+  ct state { established, related } accept
+  ct state invalid counter drop
+
+  # zone based stateful rules
+  iifname $zone_lan_ifaces counter jump input_lan
+  iifname $zone_wan_ifaces counter jump input_wan
+  iifname $zone_wg0_ifaces counter jump input_wg0
+  iifname $zone_wg1_ifaces counter jump input_wg1
+
+  counter reject
+}
+
+# zone: lan -> router
+chain input_lan {
+  meta l4proto { icmp, ipv6-icmp } counter accept
+
+  udp dport 53 accept comment "allow dns over udp"
+  tcp dport 53 tcp flags syn / fin,syn,rst,ack accept comment "allow dns over tcp"
+
+  udp sport 68 udp dport 67 accept comment "allow dhcp"
+
+  tcp dport 22 tcp flags syn / fin,syn,rst,ack accept comment "allow ssh"
+
+  udp dport 55240 accept comment "allow wireguard wg0"
+  udp dport 55241 accept comment "allow wireguard wg1"
+
+  counter reject
+}
+
+# zone: wan -> router
+chain input_wan {
+  icmp type echo-request counter accept
+  icmpv6 type { destination-unreachable, time-exceeded, echo-request, echo-reply, nd-router-solicit, nd-router-advert } counter accept
+  icmpv6 type . icmpv6 code { packet-too-big . 0, parameter-problem . 0, nd-neighbor-solicit . 0, nd-neighbor-advert . 0, parameter-problem . 1 } counter accept
+  meta l4proto { icmp, ipv6-icmp } counter drop # count the rest
+
+  ip6 saddr fe80::/10 ip6 daddr fe80::/10 udp sport 547 udp dport 546 counter accept comment "allow dhcpv6 from server"
+
+  udp dport 55240 accept comment "allow wireguard wg0"
+  udp dport 55241 accept comment "allow wireguard wg1"
+
+  counter drop
+}
+
+# zone: wg0 -> router
+chain input_wg0 {
+  meta l4proto { icmp, ipv6-icmp } counter accept
+
+  udp dport 53 accept comment "allow dns over udp"
+  tcp dport 53 tcp flags syn / fin,syn,rst,ack accept comment "allow dns over tcp"
+
+  tcp dport 22 tcp flags syn / fin,syn,rst,ack accept comment "allow ssh"
+
+  counter reject
+}
+
+# zone: wg1 -> router
+chain input_wg1 {
+  meta l4proto { icmp, ipv6-icmp } counter accept
+
+  udp dport 53 accept comment "allow dns over udp"
+  tcp dport 53 tcp flags syn / fin,syn,rst,ack accept comment "allow dns over tcp"
+
+  tcp dport 22 tcp flags syn / fin,syn,rst,ack accept comment "allow ssh"
+
+  counter reject
+}

@@ -1,0 +1,61 @@
+chain output {
+  type filter hook output priority filter; policy accept;
+
+  # stateless rules
+  oif "lo" accept
+  oifname $wan_iface ip6 daddr $transix_endpoints ip6 nexthdr ipv4 accept
+
+  # conntrack
+  ct state { established, related } accept
+  ct state invalid counter drop
+
+  # zone based stateful rules
+  oifname $zone_wan_ifaces counter jump output_wan
+  oifname $zone_lan_ifaces counter jump output_lan
+  oifname $zone_wg0_ifaces counter jump output_wg0
+  oifname $zone_wg1_ifaces counter jump output_wg1
+
+  counter reject
+}
+
+# zone: router -> wan
+chain output_wan {
+  meta l4proto { icmp, ipv6-icmp } counter accept
+
+  tcp sport $self_ephemeral_port_range tcp flags syn / fin,syn,rst,ack counter accept
+  udp sport $self_ephemeral_port_range counter accept
+
+  ip6 saddr fe80::/10 udp sport 546 udp dport 547 counter accept comment "allow dhcpv6 to server"
+
+  counter reject
+}
+
+# zone: router -> lan
+chain output_lan {
+  meta l4proto { icmp, ipv6-icmp } counter accept
+
+  tcp sport $self_ephemeral_port_range tcp flags syn / fin,syn,rst,ack counter accept
+  udp sport $self_ephemeral_port_range counter accept
+
+  counter reject
+}
+
+# zone: router -> wg0
+chain output_wg0 {
+  meta l4proto { icmp, ipv6-icmp } counter accept
+
+  tcp sport $self_ephemeral_port_range tcp flags syn / fin,syn,rst,ack counter accept
+  udp sport $self_ephemeral_port_range counter accept
+
+  counter reject
+}
+
+# zone: router -> wg1
+chain output_wg1 {
+  meta l4proto { icmp, ipv6-icmp } counter accept
+
+  tcp sport $self_ephemeral_port_range tcp flags syn / fin,syn,rst,ack counter accept
+  udp sport $self_ephemeral_port_range counter accept
+
+  counter reject
+}

@@ -52,7 +52,10 @@ in
           devices = ${constants.fastpathIfaces}
         }
 
-        include "${./nftables/filter.nft}"
+        include "${./nftables/filter_prerouting.nft}"
+        include "${./nftables/filter_input.nft}"
+        include "${./nftables/filter_forward.nft}"
+        include "${./nftables/filter_output.nft}"
       }
 
       table inet raw {
