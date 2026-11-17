@@ -8,6 +8,7 @@ from pathlib import Path
 import tempfile
 import shutil
 from ipaddress import IPv4Address, IPv6Address, ip_network
+from datetime import datetime, timezone
 
 from typing import Iterator
 
@@ -81,11 +82,26 @@ def process_bogon_file(url: str, dest: Path, set_name: str, set_type: str) -> in
         tmp.write(HEADER.format(set_name=set_name, set_type=set_type))
 
         for line in fetch_bogon_list(url):
-            if line.startswith("#"):
+            if line[0] == "#":
+                if line.startswith("# last updated"):
+                    unix_timestamp = float(
+                        line.lstrip("# last updated ").split(" ", maxsplit=1)[0]
+                    )
+                    timestamp = (
+                        datetime.fromtimestamp(
+                            timestamp=unix_timestamp, tz=timezone.utc
+                        )
+                        .isoformat()
+                        .replace("+00:00", "Z")
+                    )
+                    comments.append(f"# last updated: {timestamp}")
+                    continue
+
                 comments.append(line)
-            else:
-                tmp.write(f"    {line},\n")
-                count += 1
+                continue
+
+            tmp.write(f"    {line},\n")
+            count += 1
 
         tmp.write(FOOTER)
         tmp.write(f"# prefix count: {count}\n")
