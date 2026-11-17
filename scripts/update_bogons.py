@@ -7,12 +7,26 @@ import ipaddress
 from pathlib import Path
 import tempfile
 import shutil
-from ipaddress import ip_network
+from ipaddress import IPv4Address, IPv6Address, ip_network
 
 from typing import Iterator
 
 
+ASSERT_EXCLUDED_IPV4 = [
+    IPv4Address("9.9.9.9"),
+    IPv4Address("149.112.112.112"),
+]
+
+
+ASSERT_EXCLUDED_IPV6 = [
+    IPv6Address("2620:fe::fe"),  # 2620:fe::9 is in the same /48 as this one
+    IPv6Address("2404:8e00::feed:100"),  # other endpoints are in the same /48
+]
+
+
 def fetch_bogon_list(url: str) -> Iterator[str]:
+    assert_excluded = None
+
     with urllib.request.urlopen(url) as response:
         for binary_line in response:
             line = binary_line.decode().strip()
@@ -27,7 +41,19 @@ def fetch_bogon_list(url: str) -> Iterator[str]:
                 continue
 
             # verify it actually is a prefix, raises ValueError if not
-            ip_network(line)
+            network = ip_network(line)
+            if assert_excluded is None:
+                match network.version:
+                    case 4:
+                        assert_excluded = ASSERT_EXCLUDED_IPV4
+                    case 6:
+                        assert_excluded = ASSERT_EXCLUDED_IPV6
+
+            for excluded in assert_excluded:
+                if excluded in network:
+                    raise RuntimeError(
+                        f"fatal: excluded network found in bogon: {excluded}"
+                    )
 
             yield line
 
