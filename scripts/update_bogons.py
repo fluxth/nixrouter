@@ -21,6 +21,9 @@ def fetch_bogon_list(url: str) -> Iterator[str]:
                 continue
 
             if line[0] == "#":
+                if line.startswith("# last updated"):
+                    yield line
+
                 continue
 
             # verify it actually is a prefix, raises ValueError if not
@@ -46,16 +49,22 @@ FOOTER = """\
 
 def process_bogon_file(url: str, dest: Path, set_name: str, set_type: str) -> int:
     count = 0
+    comments = []
 
     with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as tmp:
         tmp.write(HEADER.format(set_name=set_name, set_type=set_type))
 
-        for ip in fetch_bogon_list(url):
-            tmp.write(f"    {ip},\n")
-            count += 1
+        for line in fetch_bogon_list(url):
+            if line.startswith("#"):
+                comments.append(line)
+            else:
+                tmp.write(f"    {line},\n")
+                count += 1
 
         tmp.write(FOOTER)
         tmp.write(f"# prefix count: {count}\n")
+        tmp.write("\n".join(comments))
+        tmp.write("\n")
 
         tmp.flush()
 
