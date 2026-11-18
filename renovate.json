@@ -12,6 +12,9 @@
   "schedule": ["before 7am"],
   "prHourlyLimit": 0,
   "prConcurrentLimit": 0,
+  "nix": {
+    "enabled": true
+  },
   "packageRules": [
     {
       "description": "Auto-merge GitHub Actions patch and digest updates",
