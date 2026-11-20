@@ -23,6 +23,11 @@
       "schedule": ["before 6am"],
       "automerge": true,
       "automergeType": "pr"
+    },
+    {
+      "matchManagers": ["nix"],
+      "matchUpdateTypes": ["lockFileMaintenance"],
+      "schedule": ["before 7am"]
     }
   ]
 }
