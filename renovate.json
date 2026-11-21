@@ -27,7 +27,9 @@
     {
       "matchManagers": ["nix"],
       "matchUpdateTypes": ["lockFileMaintenance"],
-      "schedule": ["before 7am"]
+      "schedule": ["before 7am"],
+      "branchTopic": "nix-lock-file-maintenance",
+      "commitMessageAction": "Update nix flake.lock"
     }
   ]
 }
