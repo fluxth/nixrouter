@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import argparse
 import asyncio
 import urllib.request
 import ipaddress
@@ -62,7 +63,7 @@ def fetch_bogon_list(url: str) -> Iterator[str]:
 HEADER = """\
 set {set_name} {{
   type {set_type}
-  flags interval, constant
+  flags interval
   auto-merge
 
   elements = {{
@@ -148,20 +149,32 @@ def process_bogon_file(url: str, dest: Path, set_name: str, set_type: str):
             print("same contents, skipping")
 
 
-def fetch_ipv4_bogons():
+def fetch_ipv4_bogons(output_dir: Path):
     print("fetching ipv4 bogons")
     url = "https://team-cymru.org/Services/Bogons/fullbogons-ipv4.txt"
-    dest = Path(__file__).parent.parent / "network/nftables/prefixes/ipv4_bogons.nft"
+    dest = output_dir / "ipv4_bogons.nft"
     process_bogon_file(url, dest, "ipv4_bogons", "ipv4_addr")
 
 
-def fetch_ipv6_bogons():
+def fetch_ipv6_bogons(output_dir: Path):
     print("fetching ipv6 bogons")
     url = "https://team-cymru.org/Services/Bogons/fullbogons-ipv6.txt"
-    dest = Path(__file__).parent.parent / "network/nftables/prefixes/ipv6_bogons.nft"
+    dest = output_dir / "ipv6_bogons.nft"
     process_bogon_file(url, dest, "ipv6_bogons", "ipv6_addr")
 
 
 if __name__ == "__main__":
-    fetch_ipv4_bogons()
-    fetch_ipv6_bogons()
+    parser = argparse.ArgumentParser(
+        description="fetch the team cymru fullbogons as nft set files"
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path(__file__).parent.parent / "network/nftables/prefixes",
+        help="directory to write the set files to (default: %(default)s)",
+    )
+
+    args = parser.parse_args()
+
+    fetch_ipv4_bogons(args.output_dir)
+    fetch_ipv6_bogons(args.output_dir)

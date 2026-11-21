@@ -29,6 +29,7 @@ in
     ./services/dnsproxy.nix
     ./services/ndppd.nix
     ./services/ddns.nix
+    ./services/bogons.nix
   ];
 
   sops = {

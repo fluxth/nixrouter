@@ -1,6 +1,6 @@
 set ipv6_bogons {
   type ipv6_addr
-  flags interval, constant
+  flags interval
   auto-merge
 
   elements = {
