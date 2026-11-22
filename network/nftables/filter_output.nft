@@ -14,6 +14,7 @@ chain output {
   oifname $zone_lan_ifaces counter jump output_lan
   oifname $zone_wg0_ifaces counter jump output_wg0
   oifname $zone_wg1_ifaces counter jump output_wg1
+  oifname $zone_nat64_ifaces counter jump output_nat64
 
   counter reject
 }
@@ -52,6 +53,16 @@ chain output_wg0 {
 
 # zone: router -> wg1
 chain output_wg1 {
+  meta l4proto { icmp, ipv6-icmp } counter accept
+
+  tcp sport $self_ephemeral_port_range tcp flags syn / fin,syn,rst,ack counter accept
+  udp sport $self_ephemeral_port_range counter accept
+
+  counter reject
+}
+
+# zone: router -> nat64
+chain output_nat64 {
   meta l4proto { icmp, ipv6-icmp } counter accept
 
   tcp sport $self_ephemeral_port_range tcp flags syn / fin,syn,rst,ack counter accept

@@ -41,7 +41,7 @@ chain upstream_send_dslite {
   meta nfproto != ipv4 counter drop
 
   # outbound saddr can include private and dslite B4 address
-  ip saddr != @ipv4_private ip saddr != 192.0.0.2 ip saddr @ipv4_bogons counter drop
+  ip saddr != @ipv4_private ip saddr != 192.0.0.2 ip saddr != 100.64.0.0/16 ip saddr @ipv4_bogons counter drop
   # outbound daddr can include dslite AFTR address
   ip daddr != 192.0.0.1 ip daddr @ipv4_bogons counter drop
 
@@ -74,7 +74,7 @@ chain upstream_recv_dslite {
   # inbound saddr can include dslite AFTR address
   ip saddr != 192.0.0.1 ip saddr @ipv4_bogons counter drop
   # inbound daddr can include private and dslite B4 address
-  ip daddr != @ipv4_private ip daddr != 192.0.0.2 ip daddr @ipv4_bogons counter drop
+  ip daddr != @ipv4_private ip daddr != 192.0.0.2 ip daddr != 100.64.0.0/16 ip daddr @ipv4_bogons counter drop
 
   accept
 }

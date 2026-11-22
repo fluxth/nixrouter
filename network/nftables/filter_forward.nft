@@ -19,6 +19,7 @@ chain forward {
   iifname $zone_lan_ifaces oifname $zone_wan_ifaces counter jump forward_lan_wan
   iifname $zone_lan_ifaces oifname $zone_wg0_ifaces counter jump forward_lan_wg0
   iifname $zone_lan_ifaces oifname $zone_wg1_ifaces counter jump forward_lan_wg1
+  iifname $zone_lan_ifaces oifname $zone_nat64_ifaces counter jump forward_lan_nat64
   iifname $zone_lan_ifaces oifname $zone_lan_ifaces counter accept # allow intra zone
   # from wan
   iifname $zone_wan_ifaces oifname $zone_lan_ifaces counter jump forward_wan_lan
@@ -35,6 +36,8 @@ chain forward {
   iifname $zone_wg1_ifaces oifname $zone_wan_ifaces counter jump forward_wg1_wan
   iifname $zone_wg1_ifaces oifname $zone_wg0_ifaces counter jump forward_wg1_wg0
   iifname $zone_wg1_ifaces oifname $zone_wg1_ifaces counter reject # disallow intra zone
+  # from nat64
+  iifname $zone_nat64_ifaces oifname $zone_wan_ifaces counter accept
 
   counter reject
 }
@@ -151,6 +154,15 @@ chain forward_wg1_wan {
 # zone: wg1 -> wg0
 chain forward_wg1_wg0 {
   meta l4proto { icmp, ipv6-icmp } counter accept
+
+  counter reject
+}
+
+# zone: lan -> nat64
+chain forward_lan_nat64 {
+  # only the nat64 prefix is routed here (see network/interfaces.nix), be explicit anyway
+  # replies and icmp errors come back through the conntrack rules in the forward chain
+  ip6 daddr $nat64_prefix counter accept
 
   counter reject
 }

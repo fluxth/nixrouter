@@ -194,6 +194,21 @@ in
           ];
         };
       }
+      {
+        "500-nat64-host" = {
+          matchConfig.Name = "nat64-host";
+          linkConfig.RequiredForOnline = "no";
+          networkConfig = {
+            IPv6Forwarding = true;
+            IPv4Forwarding = true;
+            IPv6AcceptRA = false;
+          };
+          routes = [
+            { Destination = "64:ff9b::/96"; }
+            { Destination = "100.64.0.0/16"; }
+          ];
+        };
+      }
     ];
   };
 }

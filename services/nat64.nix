@@ -1,0 +1,99 @@
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+
+let
+  netnsScript = pkgs.writeShellApplication {
+    name = "nat64-netns";
+    runtimeInputs = [
+      pkgs.iproute2
+      pkgs.procps
+    ];
+    text = ''
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      ns="nat64"
+      host_iface="nat64-host"
+      ns_iface="nat64-ns"
+
+      down() {
+        # must work on half set up state, it also runs when "up" failed
+        # deleting one end of a veth pair removes the other end too
+        ip link del "$host_iface" 2>/dev/null || true
+        ip netns del "$ns" 2>/dev/null || true
+      }
+
+      up() {
+        # a previous run may have died halfway, start from a clean slate
+        down
+
+        ip netns add "$ns"
+        ip link add "$host_iface" type netkit mode l3 peer name "$ns_iface"
+        ip link set "$ns_iface" netns "$ns"
+
+        # network namespaces start with forwarding off, jool needs it on
+        # https://nicmx.github.io/Jool/en/run-nat64.html
+        ip netns exec "$ns" sysctl -qw net.ipv4.conf.all.forwarding=1 net.ipv6.conf.all.forwarding=1
+
+        ip -n "$ns" link set lo up
+        ip -n "$ns" link set "$ns_iface" up
+
+        # translated ipv4 goes out via the router, and so do replies to the ipv6 clients
+        ip -n "$ns" route add default dev "$ns_iface"
+        ip -n "$ns" -6 route add default dev "$ns_iface"
+      }
+
+      case "''${1:-}" in
+        up) up ;;
+        down) down ;;
+        *)
+          echo "usage: nat64-netns up|down" >&2
+          exit 2
+          ;;
+      esac
+    '';
+  };
+in
+{
+  systemd.services.nat64-netns = {
+    description = "Network namespace for jool nat64";
+
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${lib.getExe netnsScript} up";
+      # unlike ExecStop this also runs when ExecStart failed halfway
+      ExecStopPost = "${lib.getExe netnsScript} down";
+    };
+  };
+
+   networking.jool = {
+    enable = true;
+
+    siit.default = {
+      framework = "netfilter";
+      global = {
+        pool6 = "64:ff9b::/96";
+        amend-udp-checksum-zero = true;
+      };
+      eamt = [
+        {
+          "ipv6 prefix" = "fd64:64::6440:0/112";
+          "ipv4 prefix" = "100.64.0.0/16";
+        }
+      ];
+    };
+  };
+
+  # jool instances are bound to the network namespace they are created in, so
+  # run the module's unit inside the namespace
+  systemd.services.jool-siit-default = {
+    bindsTo = [ "nat64-netns.service" ];
+    after = [ "nat64-netns.service" ];
+    serviceConfig.NetworkNamespacePath = "/run/netns/nat64";
+  };
+}

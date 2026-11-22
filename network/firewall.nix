@@ -36,10 +36,13 @@ in
 
       define wg1_ipv6_prefix = ${constants.wg1Ipv6Prefix}
 
+      define nat64_prefix = 64:ff9b::/96
+
       define zone_wan_ifaces = { $wan_iface, $transix_iface, $pppoe_iface }
       define zone_lan_ifaces = { $lan_iface }
       define zone_wg0_ifaces = "${constants.wg0Iface}"
       define zone_wg1_ifaces = "${constants.wg1Iface}"
+      define zone_nat64_ifaces = "nat64-host"
 
       define self_ephemeral_port_range = ${constants.selfEphemeralPortStart}-${constants.selfEphemeralPortEnd}
 

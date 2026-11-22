@@ -30,6 +30,7 @@ in
     ./services/ndppd.nix
     ./services/ddns.nix
     ./services/bogons.nix
+    ./services/nat64.nix
   ];
 
   sops = {
@@ -56,6 +57,7 @@ in
 
   boot.kernelPackages = pkgs.linuxPackages_latest;
   boot.kernelParams = [ "console=ttyS4,115200" ]; # see serial.nix for more
+  boot.kernelModules = [ "jool_siit" ];
 
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;

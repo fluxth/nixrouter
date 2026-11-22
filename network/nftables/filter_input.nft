@@ -14,6 +14,7 @@ chain input {
   iifname $zone_wan_ifaces counter jump input_wan
   iifname $zone_wg0_ifaces counter jump input_wg0
   iifname $zone_wg1_ifaces counter jump input_wg1
+  iifname $zone_nat64_ifaces counter jump input_nat64
 
   counter reject
 }
@@ -70,6 +71,13 @@ chain input_wg1 {
   tcp dport 53 tcp flags syn / fin,syn,rst,ack accept comment "allow dns over tcp"
 
   tcp dport 22 tcp flags syn / fin,syn,rst,ack accept comment "allow ssh"
+
+  counter reject
+}
+
+# zone: nat64 -> router
+chain input_nat64 {
+  meta l4proto { icmp, ipv6-icmp } counter accept
 
   counter reject
 }
