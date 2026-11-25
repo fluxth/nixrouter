@@ -197,7 +197,10 @@ in
       {
         "500-nat64-host" = {
           matchConfig.Name = "nat64-host";
-          linkConfig.RequiredForOnline = "no";
+          linkConfig = {
+            RequiredForOnline = "no";
+            MTUBytes = 65535;
+          };
           networkConfig = {
             IPv6Forwarding = true;
             IPv4Forwarding = true;

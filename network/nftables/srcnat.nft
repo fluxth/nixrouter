@@ -4,5 +4,6 @@ chain srcnat {
   # I know this is cursed, but I only get one /64 from upstream and it's not even a routed block
   oifname $wan_iface ip6 saddr $wg1_ipv6_prefix counter masquerade
 
-  oifname $zone_nat64_ifaces ip6 saddr 2409:10:720:c200::/64 snat to fd64:64::6440:1-fd64:64::6440:fffe persistent
+  # the range for nat64 siit (100.64.1.0-100.64.255.254), it leaves out 100.64.0.0/24 which holds the translator's own address
+  oifname $zone_nat64_ifaces ip6 saddr 2409:10:720:c200::/64 snat to fd64:64::6440:100-fd64:64::6440:fffe persistent
 }
