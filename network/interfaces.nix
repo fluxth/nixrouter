@@ -78,7 +78,7 @@ in
             IPv4Forwarding = true;
             LinkLocalAddressing = false;
           };
-          address = [ "192.0.0.2" ];
+          address = [ "192.0.0.2/32" ];
           routes = [
             {
               Destination = "0.0.0.0/0";
