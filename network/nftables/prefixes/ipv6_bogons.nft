@@ -156208,7 +156208,11 @@ set ipv6_bogons {
     2c0f:1d84::/30,
     2c0f:1d88::/29,
     2c0f:1d90::/28,
-    2c0f:1da0::/27,
+    2c0f:1da1::/32,
+    2c0f:1da2::/31,
+    2c0f:1da4::/30,
+    2c0f:1da8::/29,
+    2c0f:1db0::/28,
     2c0f:1dc1::/32,
     2c0f:1dc2::/31,
     2c0f:1dc4::/30,
@@ -158851,5 +158855,5 @@ set ipv6_bogons {
     8000::/1,
   }
 }
-# prefix count: 158845
-# last updated: 2026-11-26T04:55:02Z
+# prefix count: 158849
+# last updated: 2026-11-26T12:55:01Z
