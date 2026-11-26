@@ -44,7 +44,7 @@ in
       };
       tunnelConfig = {
         Mode = "ipip6";
-        Local = "slaac";
+        Local = constants.transixIpv6Host;
         Remote = constants.transixEndpoint;
         EncapsulationLimit = "none"; # otherwise the MTU drops by 8 bytes (1460 to 1452)
         DiscoverPathMTU = true;
@@ -64,6 +64,9 @@ in
             IPv6PrivacyExtensions = true;
             Tunnel = constants.transixIface;
           };
+          address = [
+            constants.transixIpv6HostPrefix # static address for dslite
+          ];
           ipv6AcceptRAConfig = {
             UseOnLinkPrefix = false;
             Token = "prefixstable";

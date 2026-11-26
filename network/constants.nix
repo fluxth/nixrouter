@@ -13,6 +13,8 @@ rec {
 
   transixIface = "wan4-dslite";
   transixMTU = "1460"; # ipv4 over ipv6
+  transixIpv6Host = "${upstreamDelegatedTemplatePrefix}::64";
+  transixIpv6HostPrefix = "${transixIpv6Host}/128";
   transixEndpointSet = "{ 2404:8e00::feed:100, 2404:8e00::feed:101, 2404:8e00::feed:102 }"; # nft set, for firewall
   transixEndpoint = "2404:8e00::feed:101"; # the one to use
 
