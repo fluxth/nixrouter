@@ -30,6 +30,17 @@ in
   systemd.network = {
     enable = true;
 
+    links."10-wan6" = {
+      matchConfig.Path = "pci-0000:04:00.0";
+      linkConfig = {
+        MACAddress = "7A:B9:45:91:58:8E";
+
+        # taken from systemd default 99-default.link
+        NamePolicy = "keep kernel database onboard slot path";
+        AlternativeNamesPolicy = "database onboard slot path";
+      };
+    };
+
     netdevs."100-br-lan" = {
       netdevConfig = {
         Name = constants.lanIface;
